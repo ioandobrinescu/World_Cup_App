@@ -55,6 +55,42 @@ const TEAMS = [
   "Curaçao", "Haiti", "Panama", "New Zealand"
 ];
 
+const styles = {
+  app: { minHeight: "100vh", background: "#0a0e1a", color: "#e8eaf0", fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif" },
+  nav: { background: "rgba(10,14,26,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
+  logo: { fontWeight: 800, fontSize: 20, color: "#f5c842", letterSpacing: "-0.5px", marginRight: "auto", cursor: "pointer" },
+  navBtn: (active) => ({ background: active ? "rgba(245,200,66,0.12)" : "transparent", border: "none", color: active ? "#f5c842" : "rgba(232,234,240,0.6)", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400 }),
+  hero: { padding: "80px 24px 60px", maxWidth: 820, margin: "0 auto", textAlign: "center" },
+  heroTitle: { fontSize: 52, fontWeight: 800, color: "#f5c842", margin: "0 0 12px", lineHeight: 1.1, letterSpacing: "-2px" },
+  heroSub: { fontSize: 18, color: "rgba(232,234,240,0.6)", margin: "0 0 48px" },
+  card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px 24px", marginBottom: 16 },
+  btn: (variant="primary") => ({ background: variant === "primary" ? "#f5c842" : variant === "danger" ? "#e24b4b" : "rgba(255,255,255,0.07)", color: variant === "primary" ? "#0a0e1a" : "#e8eaf0", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer" }),
+  pickBtn: (selected, type) => {
+    const colors = { "1": "#4caf50", "X": "#f5c842", "2": "#2196f3" };
+    return { background: selected ? colors[type] : "rgba(255,255,255,0.06)", color: selected ? "#0a0e1a" : "#e8eaf0", border: `1.5px solid ${selected ? colors[type] : "rgba(255,255,255,0.12)"}`, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13, minWidth: 52 };
+  },
+  input: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, color: "#e8eaf0", padding: "10px 14px", fontSize: 14, width: "100%", outline: "none" },
+  label: { fontSize: 12, color: "rgba(232,234,240,0.5)", marginBottom: 5, display: "block" },
+  badge: (color) => ({ background: color === "gold" ? "rgba(245,200,66,0.15)" : color === "green" ? "rgba(76,175,80,0.15)" : "rgba(255,255,255,0.08)", color: color === "gold" ? "#f5c842" : color === "green" ? "#4caf50" : "rgba(232,234,240,0.5)", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 600 }),
+  podium: [
+    { bg: "rgba(255,215,0,0.12)", border: "rgba(255,215,0,0.3)", color: "#ffd700", rank: "🥇" },
+    { bg: "rgba(192,192,192,0.1)", border: "rgba(192,192,192,0.25)", color: "#c0c0c0", rank: "🥈" },
+    { bg: "rgba(205,127,50,0.1)", border: "rgba(205,127,50,0.25)", color: "#cd7f32", rank: "🥉" },
+  ],
+};
+
+const flagEmoji = (team) => {
+  const flags = {
+    "United States":"🇺🇸","Canada":"🇨🇦","Mexico":"🇲🇽","Argentina":"🇦🇷","Brazil":"🇧🇷","Colombia":"🇨🇴","Ecuador":"🇪🇨","Paraguay":"🇵🇾","Uruguay":"🇺🇾",
+    "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","France":"🇫🇷","Croatia":"🇭🇷","Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
+    "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷","Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿",
+    "Algeria":"🇩🇿","Cabo Verde":"🇨🇻","Côte d'Ivoire":"🇨🇮","Egypt":"🇪🇬","Ghana":"🇬🇭","Morocco":"🇲🇦","Senegal":"🇸🇳","South Africa":"🇿🇦","Tunisia":"🇹🇳","DR Congo":"🇨🇩",
+    "Australia":"🇦🇺","Iran":"🇮🇷","Japan":"🇯🇵","Jordan":"🇯🇴","South Korea":"🇰🇷","Qatar":"🇶🇦","Saudi Arabia":"🇸🇦","Uzbekistan":"🇺🇿","Iraq":"🇮🇶",
+    "Curaçao":"🇨🇼","Haiti":"🇭🇹","Panama":"🇵🇦","New Zealand":"🇳🇿"
+  };
+  return flags[team] || "🏳️";
+};
+
 function App() {
   const [session, setSession] = useState(() => {
     const saved = localStorage.getItem("pariuri_session");
@@ -113,7 +149,7 @@ function App() {
         });
       }
     } catch (err) {
-      console.error("Data fetch exception:", err);
+      console.error("Data fetch error:", err);
     }
   }
 
@@ -185,7 +221,6 @@ function App() {
     setError("");
     const isFirstAdmin = uname === "dobrinescu" && form.password === "admin123";
     
-    // Safety check fallback values for payload keys matching your exact Supabase schema
     const newProfileRow = {
       username: form.username.trim(),
       password: form.password,
@@ -196,8 +231,7 @@ function App() {
 
     const { error: regError } = await supabaseClient.from('profiles').insert([newProfileRow]);
     if (regError) {
-      console.error(regError);
-      setError("Registration sync failure. Check database logs.");
+      setError("Registration sync failure. Check schema constraints.");
       return;
     }
 
@@ -325,159 +359,139 @@ function App() {
   const pastMatches = matches.filter(m => m.result).sort((a,b) => kickoffDate(b) - kickoffDate(a));
   const leaderboard = computeLeaderboard();
 
-  const flagEmoji = (team) => {
-    const flags = {
-      "United States":"🇺🇸","Canada":"🇨🇦","Mexico":"🇲🇽","Argentina":"🇦🇷","Brazil":"🇧🇷","Colombia":"🇨🇴","Ecuador":"🇪🇨","Paraguay":"🇵🇾","Uruguay":"🇺🇾",
-      "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","France":"🇫🇷","Croatia":"🇭🇷","Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
-      "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷","Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿",
-      "Algeria":"🇩🇿","Cabo Verde":"🇨🇻","Côte d'Ivoire":"🇨🇮","Egypt":"🇪🇬","Ghana":"🇬🇭","Morocco":"🇲🇦","Senegal":"🇸🇳","South Africa":"🇿🇦","Tunisia":"🇹🇳","DR Congo":"🇨🇩",
-      "Australia":"🇦🇺","Iran":"🇮🇷","Japan":"🇯🇵","Jordan":"🇯🇴","South Korea":"🇰🇷","Qatar":"🇶🇦","Saudi Arabia":"🇸🇦","Uzbekistan":"🇺🇿","Iraq":"🇮🇶",
-      "Curaçao":"🇨🇼","Haiti":"🇭🇹","Panama":"🇵🇦","New Zealand":"🇳🇿"
-    };
-    return flags[team] || "🏳️";
-  };
-
-  const styles = {
-    app: { minHeight: "100vh", background: "#0a0e1a", color: "#e8eaf0", fontFamily: "'Outfit', 'Segoe UI', sans-serif" },
-    nav: { background: "rgba(10,14,26,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
-    logo: { fontWeight: 800, fontSize: 20, color: "#f5c842", letterSpacing: "-0.5px", marginRight: "auto", cursor: "pointer" },
-    navBtn: (active) => ({ background: active ? "rgba(245,200,66,0.12)" : "transparent", border: "none", color: active ? "#f5c842" : "rgba(232,234,240,0.6)", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400 }),
-    hero: { padding: "80px 24px 60px", maxWidth: 820, margin: "0 auto", textAlign: "center" },
-    heroTitle: { fontSize: 52, fontWeight: 800, color: "#f5c842", margin: "0 0 12px", lineHeight: 1.1, letterSpacing: "-2px" },
-    heroSub: { fontSize: 18, color: "rgba(232,234,240,0.6)", margin: "0 0 48px" },
-    card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px 24px", marginBottom: 16 },
-    btn: (variant="primary") => ({ background: variant === "primary" ? "#f5c842" : variant === "danger" ? "#e24b4b" : "rgba(255,255,255,0.07)", color: variant === "primary" ? "#0a0e1a" : "#e8eaf0", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer" }),
-    pickBtn: (selected, type) => {
-      const colors = { "1": "#4caf50", "X": "#f5c842", "2": "#2196f3" };
-      return { background: selected ? colors[type] : "rgba(255,255,255,0.06)", color: selected ? "#0a0e1a" : "#e8eaf0", border: `1.5px solid ${selected ? colors[type] : "rgba(255,255,255,0.12)"}`, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13, minWidth: 52 };
-    },
-    input: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, color: "#e8eaf0", padding: "10px 14px", fontSize: 14, width: "100%", outline: "none" },
-    label: { fontSize: 12, color: "rgba(232,234,240,0.5)", marginBottom: 5, display: "block" },
-    badge: (color) => ({ background: color === "gold" ? "rgba(245,200,66,0.15)" : color === "green" ? "rgba(76,175,80,0.15)" : "rgba(255,255,255,0.08)", color: color === "gold" ? "#f5c842" : color === "green" ? "#4caf50" : "rgba(232,234,240,0.5)", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 600 }),
-    podium: [
-      { bg: "rgba(255,215,0,0.12)", border: "rgba(255,215,0,0.3)", color: "#ffd700", rank: "🥇" },
-      { bg: "rgba(192,192,192,0.1)", border: "rgba(192,192,192,0.25)", color: "#c0c0c0", rank: "🥈" },
-      { bg: "rgba(205,127,50,0.1)", border: "rgba(205,127,50,0.25)", color: "#cd7f32", rank: "🥉" },
-    ],
-  };
-
-  const ToastEl = toast ? (
-    <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#f5c842", color: "#0a0e1a", padding: "12px 24px", borderRadius: 12, fontWeight: 700, fontSize: 14, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>{toast}</div>
-  ) : null;
-
-  function LandingPage() {
-    return (
-      <div style={styles.hero}>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
-        <div style={{ fontSize: 48, marginBottom: 8 }}>⚽</div>
-        <h1 style={styles.heroTitle}>Pariuri World Cup 2026</h1>
-        <p style={styles.heroSub}>The ultimate football prediction arena with friends.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, marginBottom: 48, textAlign: "left" }}>
-          {[
-            ["⚽", "Pick the result", "Choose 1, X, or 2 for each match before kickoff."],
-            ["📊", "Earn fractional points", "Correct picks score points matching the dynamic match odds."],
-            ["🏆", "Crown the champion", "Predict your tournament winner for custom bonus points."],
-            ["🥇", "Dominate rankings", "Scale the local bracket and out-smart your competition."],
-          ].map(([icon, title, desc]) => (
-            <div key={title} style={{ ...styles.card, padding: "18px 20px" }}>
-              <div style={{ fontSize: 26, marginBottom: 8 }}>{icon}</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{title}</div>
-              <div style={{ fontSize: 13, color: "rgba(232,234,240,0.55)", lineHeight: 1.6 }}>{desc}</div>
+  return (
+    <div style={styles.app}>
+      {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#f5c842", color: "#0a0e1a", padding: "12px 24px", borderRadius: 12, fontWeight: 700, fontSize: 14, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>{toast}</div>}
+      
+      <nav style={styles.nav}>
+        <div style={styles.logo} onClick={() => setPage(isAdmin ? "admin" : session ? "leaderboard" : "home")}>⚽ Pariuri World Cup 2026</div>
+        {session ? (
+          <>
+            {isAdmin ? (
+              <button style={styles.navBtn(page==="admin")} onClick={() => setPage("admin")}>Admin</button>
+            ) : (
+              [["leaderboard", "Leaderboard"], ["picks", "Next Matchday"], ["results", "Results"], ["schedule", "Schedule"]].map(([key, label]) => (
+                <button key={key} style={styles.navBtn(page===key)} onClick={() => setPage(key)}>{label}</button>
+              ))
+            )}
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, color: "rgba(232,234,240,0.4)" }}>{currentUser?.username}</span>
+              <button style={{ ...styles.btn("ghost"), padding: "6px 12px", fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }} onClick={handleLogout}>Logout</button>
             </div>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          <button style={{ ...styles.btn("primary"), padding: "13px 32px", fontSize: 15 }} onClick={() => { setAuthMode("register"); setPage("auth"); }}>Join the game</button>
-          <button style={{ ...styles.btn("ghost"), padding: "13px 32px", fontSize: 15, border: "1px solid rgba(255,255,255,0.12)" }} onClick={() => { setAuthMode("login"); setPage("auth"); }}>Sign in</button>
-        </div>
-      </div>
-    );
-  }
-
-  function AuthPage() {
-    return (
-      <div style={{ maxWidth: 420, margin: "60px auto", padding: "0 24px" }}>
-        <div style={styles.card}>
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>⚽</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#f5c842" }}>Pariuri World Cup 2026</div>
+          </>
+        ) : (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...styles.btn("ghost"), padding: "6px 12px", fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }} onClick={() => { setAuthMode("login"); setPage("auth"); }}>Sign in</button>
+            <button style={{ ...styles.btn("primary"), padding: "6px 12px", fontSize: 13 }} onClick={() => { setAuthMode("register"); setPage("auth"); }}>Join</button>
           </div>
-          <div style={{ display: "flex", marginBottom: 20, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
-            {["login","register"].map(m => (
-              <button key={m} style={{ flex: 1, background: authMode === m ? "rgba(245,200,66,0.15)" : "transparent", border: "none", color: authMode === m ? "#f5c842" : "rgba(232,234,240,0.5)", padding: "9px 0", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13.5 }} onClick={() => { setAuthMode(m); setError(""); }}>
-                {m === "login" ? "Sign in" : "Register"}
-              </button>
+        )}
+      </nav>
+
+      {/* Pages Layout Selection */}
+      {!session && page === "home" && (
+        <div style={styles.hero}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>⚽</div>
+          <h1 style={styles.heroTitle}>Pariuri World Cup 2026</h1>
+          <p style={styles.heroSub}>The ultimate football prediction arena with friends.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, marginBottom: 48, textAlign: "left" }}>
+            {[
+              ["⚽", "Pick the result", "Choose 1, X, or 2 for each match before kickoff."],
+              ["📊", "Earn fractional points", "Correct picks score points matching the dynamic match odds."],
+              ["🏆", "Crown the champion", "Predict your tournament winner for custom bonus points."],
+              ["🥇", "Dominate rankings", "Scale the local bracket and out-smart your competition."],
+            ].map(([icon, title, desc]) => (
+              <div key={title} style={{ ...styles.card, padding: "18px 20px" }}>
+                <div style={{ fontSize: 26, marginBottom: 8 }}>{icon}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{title}</div>
+                <div style={{ fontSize: 13, color: "rgba(232,234,240,0.55)", lineHeight: 1.6 }}>{desc}</div>
+              </div>
             ))}
           </div>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+            <button style={{ ...styles.btn("primary"), padding: "13px 32px", fontSize: 15 }} onClick={() => { setAuthMode("register"); setPage("auth"); }}>Join the game</button>
+            <button style={{ ...styles.btn("ghost"), padding: "13px 32px", fontSize: 15, border: "1px solid rgba(255,255,255,0.1)" }} onClick={() => { setAuthMode("login"); setPage("auth"); }}>Sign in</button>
+          </div>
+        </div>
+      )}
 
-          {authMode === "login" ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div><label style={styles.label}>Username</label><input style={styles.input} value={form.username||""} onChange={e=>setForm(p=>({...p,username:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} /></div>
-              <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} /></div>
-              {error && <div style={{ color: "#e24b4b", fontSize: 13 }}>{error}</div>}
-              <button style={{ ...styles.btn("primary"), padding: "12px", fontSize: 15 }} onClick={handleLogin}>Sign in</button>
+      {!session && page === "auth" && (
+        <div style={{ maxWidth: 420, margin: "60px auto", padding: "0 24px" }}>
+          <div style={styles.card}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>⚽</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#f5c842" }}>Pariuri World Cup 2026</div>
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div><label style={styles.label}>Username</label><input style={styles.input} value={form.username||""} onChange={e=>setForm(p=>({...p,username:e.target.value}))} /></div>
-              <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} /></div>
-              <div><label style={styles.label}>Confirm password</label><input style={styles.input} type="password" value={form.password2||""} onChange={e=>setForm(p=>({...p,password2:e.target.value}))} /></div>
-              <div>
-                <label style={styles.label}>🏆 Champion prediction</label>
-                <select style={styles.input} value={form.championPick||""} onChange={e=>setForm(p=>({...p,championPick:e.target.value}))}>
-                  <option value="">Pick team...</option>
-                  {TEAMS.map(t=><option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
-                </select>
+            <div style={{ display: "flex", marginBottom: 20, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
+              {["login","register"].map(m => (
+                <button key={m} style={{ flex: 1, background: authMode === m ? "rgba(245,200,66,0.15)" : "transparent", border: "none", color: authMode === m ? "#f5c842" : "rgba(232,234,240,0.5)", padding: "9px 0", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13.5 }} onClick={() => { setAuthMode(m); setError(""); }}>
+                  {m === "login" ? "Sign in" : "Register"}
+                </button>
+              ))}
+            </div>
+
+            {authMode === "login" ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div><label style={styles.label}>Username</label><input style={styles.input} value={form.username||""} onChange={e=>setForm(p=>({...p,username:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} /></div>
+                <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} /></div>
+                {error && <div style={{ color: "#e24b4b", fontSize: 13 }}>{error}</div>}
+                <button style={{ ...styles.btn("primary"), padding: "12px", fontSize: 15 }} onClick={handleLogin}>Sign in</button>
               </div>
-              {error && <div style={{ color: "#e24b4b", fontSize: 13 }}>{error}</div>}
-              <button style={{ ...styles.btn("primary"), padding: "12px", fontSize: 15 }} onClick={handleRegister}>Create account</button>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div><label style={styles.label}>Username</label><input style={styles.input} value={form.username||""} onChange={e=>setForm(p=>({...p,username:e.target.value}))} /></div>
+                <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} /></div>
+                <div><label style={styles.label}>Confirm password</label><input style={styles.input} type="password" value={form.password2||""} onChange={e=>setForm(p=>({...p,password2:e.target.value}))} /></div>
+                <div>
+                  <label style={styles.label}>🏆 Champion prediction</label>
+                  <select style={styles.input} value={form.championPick||""} onChange={e=>setForm(p=>({...p,championPick:e.target.value}))}>
+                    <option value="">Pick team...</option>
+                    {TEAMS.map(t=><option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
+                  </select>
+                </div>
+                {error && <div style={{ color: "#e24b4b", fontSize: 13 }}>{error}</div>}
+                <button style={{ ...styles.btn("primary"), padding: "12px", fontSize: 15 }} onClick={handleRegister}>Create account</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {session && !isAdmin && page === "leaderboard" && (
+        <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ marginBottom: 28 }}>
+            <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Leaderboard</h2>
+            <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} · {leaderboard.length} players</p>
+          </div>
+
+          {tournamentConfig.tournament_winner && (
+            <div style={{ ...styles.card, background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.25)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 28 }}>🏆</div>
+              <div>
+                <div style={{ fontWeight: 700, color: "#f5c842" }}>Official champion: {flagEmoji(tournamentConfig.tournament_winner)} {tournamentConfig.tournament_winner}</div>
+              </div>
             </div>
           )}
-        </div>
-      </div>
-    );
-  }
 
-  function LeaderboardPage() {
-    const lb = leaderboard;
-    const myRank = lb.findIndex(u => u.username?.toLowerCase() === session?.username?.toLowerCase()) + 1;
-    return (
-      <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Leaderboard</h2>
-          <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} · {lb.length} players</p>
-        </div>
-
-        {tournamentConfig.tournament_winner && (
-          <div style={{ ...styles.card, background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.25)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ fontSize: 28 }}>🏆</div>
-            <div>
-              <div style={{ fontWeight: 700, color: "#f5c842" }}>Official champion: {flagEmoji(tournamentConfig.tournament_winner)} {tournamentConfig.tournament_winner}</div>
-            </div>
-          </div>
-        )}
-
-        {currentUser && myRank > 0 && (
-          <div style={{ ...styles.card, background: "rgba(245,200,66,0.06)", border: "1px solid rgba(245,200,66,0.2)", marginBottom: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>Your bracket position</div>
-                <div style={{ fontWeight: 800, fontSize: 20 }}>#{myRank} — {currentUser.username}</div>
+          {currentUser && (
+            <div style={{ ...styles.card, background: "rgba(245,200,66,0.06)", border: "1px solid rgba(245,200,66,0.2)", marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>Your bracket position</div>
+                  <div style={{ fontWeight: 800, fontSize: 20 }}>#{leaderboard.findIndex(u => u.username?.toLowerCase() === session.username) + 1} — {currentUser.username}</div>
+                </div>
+                <div style={{ textAlign: "right", marginLeft: "auto" }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: "#f5c842" }}>{(leaderboard.find(x=>x.username?.toLowerCase()===session.username)?.computedPoints || 0).toFixed(2)}</div>
+                  <div style={{ fontSize: 11, color: "rgba(232,234,240,0.4)" }}>pts</div>
+                </div>
               </div>
-              <div style={{ textAlign: "right", marginLeft: "auto" }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#f5c842" }}>{(lb.find(x=>x.username?.toLowerCase()===session.username)?.computedPoints || 0).toFixed(2)}</div>
-                <div style={{ fontSize: 11, color: "rgba(232,234,240,0.4)" }}>pts</div>
+              <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
+                <span style={styles.badge("gold")}>🏆 {currentUser.championPick || "No choice"}</span>
               </div>
             </div>
-            <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-              <span style={styles.badge("gold")}>🏆 {currentUser.championPick || "No choice"}</span>
-            </div>
-          </div>
-        )}
+          )}
 
-        {lb.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
-            {lb.slice(0,3).map((u, i) => (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
+            {leaderboard.slice(0,3).map((u, i) => (
               <div key={u.username} style={{ ...styles.card, background: styles.podium[i]?.bg, border: `1px solid ${styles.podium[i]?.border}`, textAlign: "center", padding: "16px 12px" }}>
                 <div style={{ fontSize: 26, marginBottom: 4 }}>{styles.podium[i]?.rank}</div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: styles.podium[i]?.color, marginBottom: 2 }}>{u.username}</div>
@@ -486,224 +500,204 @@ function App() {
               </div>
             ))}
           </div>
-        )}
 
-        {lb.slice(3).map((u, i) => (
-          <div key={u.username} style={{ ...styles.card, display: "flex", alignItems: "center", gap: 14, padding: "14px 20px" }}>
-            <div style={{ width: 28, textAlign: "center", fontWeight: 700, color: "rgba(232,234,240,0.3)" }}>#{i+4}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</div>
-              <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>{flagEmoji(u.championPick)} {u.championPick}</div>
+          {leaderboard.slice(3).map((u, i) => (
+            <div key={u.username} style={{ ...styles.card, display: "flex", alignItems: "center", gap: 14, padding: "14px 20px" }}>
+              <div style={{ width: 28, textAlign: "center", fontWeight: 700, color: "rgba(232,234,240,0.3)" }}>#{i+4}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</div>
+                <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>{flagEmoji(u.championPick)} {u.championPick}</div>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: 18 }}>{u.computedPoints.toFixed(2)}</div>
             </div>
-            <div style={{ fontWeight: 800, fontSize: 18 }}>{u.computedPoints.toFixed(2)}</div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  function NextMatchdayPage() {
-    return (
-      <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Next matchday</h2>
-          <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>⏱ Picks lock automatically at match kickoff</p>
+          ))}
         </div>
-        {nextMatchday.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(232,234,240,0.3)" }}>No upcoming fixtures with odds. Check back soon!</div>
-        ) : (
-          nextMatchday.map(m => {
-            const userPick = currentUser?.picks?.[m.id];
-            const cd = countdown(m);
-            return (
-              <div key={m.id} style={styles.card}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 17 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                    <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)", marginTop: 3 }}>{m.match_date} · {m.match_time} {m.tournament_stage && `· ${m.tournament_stage}`}</div>
+      )}
+
+      {session && !isAdmin && page === "picks" && (
+        <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ marginBottom: 28 }}>
+            <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Next matchday</h2>
+            <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>⏱ Picks lock automatically at match kickoff</p>
+          </div>
+          {pickableMatches.slice(0, 10).length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(232,234,240,0.3)" }}>No upcoming fixtures with odds. Check back soon!</div>
+          ) : (
+            pickableMatches.slice(0, 10).map(m => {
+              const userPick = currentUser?.picks?.[m.id];
+              const cd = countdown(m);
+              return (
+                <div key={m.id} style={styles.card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 17 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                      <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)", marginTop: 3 }}>{m.match_date} · {m.match_time} {m.tournament_stage && `· ${m.tournament_stage}`}</div>
+                    </div>
+                    {cd && <span style={styles.badge("gold")}>⏱ {cd}</span>}
                   </div>
-                  {cd && <span style={styles.badge("gold")}>⏱ {cd}</span>}
+                  <div style={{ display: "flex", gap: 10 }}>
+                    {[["1", m.odds1, m.team1], ["X", m.oddsx, "Draw"], ["2", m.odds2, m.team2]].map(([val, odds, label]) => (
+                      <button key={val} style={{ ...styles.pickBtn(userPick === val, val), flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }} onClick={() => makePick(m.id, val)}>
+                        <span style={{ fontSize: 11, opacity: 0.6 }}>{label}</span>
+                        <span style={{ fontSize: 16 }}>{val}</span>
+                        <span style={{ fontSize: 13, fontWeight: 800 }}>{odds}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  {[["1", m.odds1, m.team1], ["X", m.oddsx, "Draw"], ["2", m.odds2, m.team2]].map(([val, odds, label]) => (
-                    <button key={val} style={{ ...styles.pickBtn(userPick === val, val), flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }} onClick={() => makePick(m.id, val)}>
-                      <span style={{ fontSize: 11, opacity: 0.6 }}>{label}</span>
-                      <span style={{ fontSize: 16 }}>{val}</span>
-                      <span style={{ fontSize: 13, fontWeight: 800 }}>{odds}</span>
-                    </button>
-                  ))}
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {session && !isAdmin && page === "results" && (
+        <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ marginBottom: 28 }}>
+            <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Results</h2>
+          </div>
+          {matches.filter(m => m.result).sort((a,b) => kickoffDate(b) - kickoffDate(a)).map(m => {
+            const userPick = currentUser?.picks?.[m.id];
+            const correct = userPick === m.result;
+            return (
+              <div key={m.id} style={{ ...styles.card, background: correct ? "rgba(76,175,80,0.05)" : "rgba(255,255,255,0.04)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div style={{ fontWeight: 800 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                  <div style={{ color: "#f5c842", fontWeight: 700 }}>Outcome: {m.result}</div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  {userPick ? <span style={styles.badge(correct ? "green" : "")}>Your selection: {userPick}</span> : <span>No prediction logged</span>}
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
-    );
-  }
-
-  function PastMatchesPage() {
-    return (
-      <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Results</h2>
+          })}
         </div>
-        {pastMatches.map(m => {
-          const userPick = currentUser?.picks?.[m.id];
-          const correct = userPick === m.result;
-          return (
-            <div key={m.id} style={{ ...styles.card, background: correct ? "rgba(76,175,80,0.05)" : "rgba(255,255,255,0.04)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ fontWeight: 800 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                <div style={{ color: "#f5c842", fontWeight: 700 }}>Outcome: {m.result}</div>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                {userPick ? <span style={styles.badge(correct ? "green" : "")}>Your selection: {userPick}</span> : <span>No prediction logged</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
+      )}
 
-  function SchedulePage() {
-    const visible = matches.filter(m => {
-      if (scheduleFilter === "UPCOMING") return !m.result;
-      if (scheduleFilter === "RESULTS") return !!m.result;
-      return true;
-    });
-
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-          {["ALL", "UPCOMING", "RESULTS"].map(f => (
-            <button key={f} style={styles.btn(scheduleFilter===f?"primary":"ghost")} onClick={()=>setScheduleFilter(f)}>{f}</button>
-          ))}
-        </div>
-        {visible.map(m => (
-          <div key={m.id} style={styles.card}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", textAlign: "center" }}>
-              <div>{flagEmoji(m.team1)} {m.team1}</div>
-              <div style={{ fontWeight: 800, background: "rgba(255,255,255,0.05)", padding: "4px 12px", borderRadius: 6 }}>
-                {m.result ? `FT: ${m.result}` : m.match_time}
-              </div>
-              <div>{m.team2} {flagEmoji(m.team2)}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  function AdminPage() {
-    return (
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-          {["matches","results","tournament","players"].map(k => (
-            <button key={k} style={styles.btn(adminTab===k?"primary":"ghost")} onClick={() => setAdminTab(k)}>{k.toUpperCase()}</button>
-          ))}
-        </div>
-
-        {adminTab === "matches" && (
-          <div>
-            <div style={styles.card}>
-              <div style={{ fontWeight: 700, marginBottom: 16 }}>Schedule Single Match</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <select style={styles.input} value={bulkTeam1} onChange={e=>setBulkTeam1(e.target.value)}><option value="">Home team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
-                <select style={styles.input} value={bulkTeam2} onChange={e=>setBulkTeam2(e.target.value)}><option value="">Away team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
-                <input type="date" style={styles.input} value={bulkDate} onChange={e=>setBulkDate(e.target.value)} />
-                <input type="time" style={styles.input} value={bulkTime} onChange={e=>setBulkTime(e.target.value)} />
-                <input type="number" step="0.01" style={styles.input} placeholder="Odds 1" value={bulkOdds1} onChange={e=>setBulkOdds1(e.target.value)} />
-                <input type="number" step="0.01" style={styles.input} placeholder="Odds X" value={bulkOddsX} onChange={e=>setBulkOddsX(e.target.value)} />
-                <input type="number" step="0.01" style={styles.input} placeholder="Odds 2" value={bulkOdds2} onChange={e=>setBulkOdds2(e.target.value)} />
-                <input style={styles.input} placeholder="Stage (e.g. Group A)" value={bulkGroup} onChange={e=>setBulkGroup(e.target.value)} />
-              </div>
-              {addError && <div style={{ color: "#e24b4b", marginTop: 8 }}>{addError}</div>}
-              <button style={{ ...styles.btn("primary"), marginTop: 16 }} onClick={adminAddMatch}>Add match</button>
-            </div>
-
-            {matches.filter(m => !m.result).map(m => (
-              <div key={m.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>{m.team1} vs {m.team2} ({m.match_date})</div>
-                <button style={styles.btn("danger")} onClick={() => adminDeleteMatch(m.id)}>Delete</button>
-              </div>
+      {session && !isAdmin && page === "schedule" && (
+        <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+            {["ALL", "UPCOMING", "RESULTS"].map(f => (
+              <button key={f} style={styles.btn(scheduleFilter===f?"primary":"ghost")} onClick={()=>setScheduleFilter(f)}>{f}</button>
             ))}
           </div>
-        )}
-
-        {adminTab === "results" && (
-          <div>
-            {matchesAwaitingResult.map(m => (
-              <div key={m.id} style={styles.card}>
-                <div style={{ fontWeight: 700, marginBottom: 10 }}>{m.team1} vs {m.team2}</div>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "1")}>1</button>
-                  <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "X")}>X</button>
-                  <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "2")}>2</button>
+          {matches.filter(m => {
+            if (scheduleFilter === "UPCOMING") return !m.result;
+            if (scheduleFilter === "RESULTS") return !!m.result;
+            return true;
+          }).map(m => (
+            <div key={m.id} style={styles.card}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", textAlign: "center" }}>
+                <div>{flagEmoji(m.team1)} {m.team1}</div>
+                <div style={{ fontWeight: 800, background: "rgba(255,255,255,0.05)", padding: "4px 12px", borderRadius: 6 }}>
+                  {m.result ? `FT: ${m.result}` : m.match_time}
                 </div>
+                <div>{m.team2} {flagEmoji(m.team2)}</div>
               </div>
-            ))}
-            {pastMatches.map(m => (
-              <div key={m.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between" }}>
-                <div>{m.team1} vs {m.team2} [Winner: {m.result}]</div>
-                <button style={styles.btn("ghost")} onClick={() => adminUndoResult(m.id)}>Undo</button>
-              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {session && isAdmin && page === "admin" && (
+        <div style={{ maxWidth: 780, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+            {["matches","results","tournament","players"].map(k => (
+              <button key={k} style={styles.btn(adminTab===k?"primary":"ghost")} onClick={() => setAdminTab(k)}>{k.toUpperCase()}</button>
             ))}
           </div>
-        )}
 
-        {adminTab === "tournament" && (
-          <div style={styles.card}>
-            <label style={styles.label}>Tournament Headline</label>
-            <input style={{ ...styles.input, marginBottom: 14 }} value={tournamentConfig.tournament_name} onChange={e => adminUpdateConfig(e.target.value, tournamentConfig.tournament_winner)} />
-            
-            <label style={styles.label}>Set Decided Tournament Winner</label>
-            <select style={styles.input} value={tournamentConfig.tournament_winner || ""} onChange={e => adminUpdateConfig(tournamentConfig.tournament_name, e.target.value || null)}>
-              <option value="">Tournament Ongoing</option>
-              {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+          {adminTab === "matches" && (
+            <div>
+              <div style={styles.card}>
+                <div style={{ fontWeight: 700, marginBottom: 16 }}>Schedule Single Match</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <select style={styles.input} value={bulkTeam1} onChange={e=>setBulkTeam1(e.target.value)}><option value="">Home team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
+                  <select style={styles.input} value={bulkTeam2} onChange={e=>setBulkTeam2(e.target.value)}><option value="">Away team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
+                  <input type="date" style={styles.input} value={bulkDate} onChange={e=>setBulkDate(e.target.value)} />
+                  <input type="time" style={styles.input} value={bulkTime} onChange={e=>setBulkTime(e.target.value)} />
+                  <input type="number" step="0.01" style={styles.input} placeholder="Odds 1" value={bulkOdds1} onChange={e=>setBulkOdds1(e.target.value)} />
+                  <input type="number" step="0.01" style={styles.input} placeholder="Odds X" value={bulkOddsX} onChange={e=>setBulkOddsX(e.target.value)} />
+                  <input type="number" step="0.01" style={styles.input} placeholder="Odds 2" value={bulkOdds2} onChange={e=>setBulkOdds2(e.target.value)} />
+                  <input style={styles.input} placeholder="Stage (e.g. Group A)" value={bulkGroup} onChange={e=>setBulkGroup(e.target.value)} />
+                </div>
+                {addError && <div style={{ color: "#e24b4b", marginTop: 8 }}>{addError}</div>}
+                <button style={{ ...styles.btn("primary"), marginTop: 16 }} onClick={adminAddMatch}>Add match</button>
+              </div>
 
-            <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {TEAMS.map(t => (
-                <div key={t} style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: 6, borderRadius: 6 }}>
-                  <span style={{ flex: 1, fontSize: 12 }}>{t}</span>
-                  <input type="number" step="0.01" style={{ ...styles.input, width: 70 }} value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminUpdateChampionOdds(t, e.target.value)} />
+              {matches.filter(m => !m.result).map(m => (
+                <div key={m.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>{m.team1} vs {m.team2} ({m.match_date})</div>
+                  <button style={styles.btn("danger")} onClick={() => adminDeleteMatch(m.id)}>Delete</button>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {adminTab === "players" && (
-          <div>
-            {Object.keys(users).map(k => {
-              const u = users[k];
-              return (
-                <div key={k} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div><strong>{u.username}</strong> {u.isAdmin && "(Admin)"} — Choice: {u.championPick}</div>
-                  {!u.isAdmin && <button style={styles.btn("danger")} onClick={() => adminDeleteUser(k)}>Delete Account</button>}
+          {adminTab === "results" && (
+            <div>
+              {matches.filter(m => !m.result && kickoffDate(m) <= new Date()).sort((a, b) => kickoffDate(a) - kickoffDate(b)).map(m => (
+                <div key={m.id} style={styles.card}>
+                  <div style={{ fontWeight: 700, marginBottom: 10 }}>{m.team1} vs {m.team2}</div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "1")}>1</button>
+                    <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "X")}>X</button>
+                    <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "2")}>2</button>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
+              ))}
+              {matches.filter(m => m.result).sort((a,b) => kickoffDate(b) - kickoffDate(a)).map(m => (
+                <div key={m.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between" }}>
+                  <div>{m.team1} vs {m.team2} [Winner: {m.result}]</div>
+                  <button style={styles.btn("ghost")} onClick={() => adminUndoResult(m.id)}>Undo</button>
+                </div>
+              ))}
+            </div>
+          )}
 
-  const playerTabs = [["leaderboard", "Leaderboard"], ["picks", "Next Matchday"], ["results", "Results"], ["schedule", "Schedule"]];
+          {adminTab === "tournament" && (
+            <div style={styles.card}>
+              <label style={styles.label}>Tournament Headline</label>
+              <input style={{ ...styles.input, marginBottom: 14 }} value={tournamentConfig.tournament_name} onChange={e => adminUpdateConfig(e.target.value, tournamentConfig.tournament_winner)} />
+              
+              <label style={styles.label}>Set Decided Tournament Winner</label>
+              <select style={styles.input} value={tournamentConfig.tournament_winner || ""} onChange={e => adminUpdateConfig(tournamentConfig.tournament_name, e.target.value || null)}>
+                <option value="">Tournament Ongoing</option>
+                {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
 
-  return (
-    <div style={styles.app}>
-      {ToastEl}
-      <nav style={styles.nav}>
-        <div style={styles.logo} onClick={() => setPage(isAdmin ? "admin" : session ? "leaderboard" : "home")}>⚽ Pariuri World Cup 2026</div>
-        {session ? (
-          <>
-            {isAdmin ? (
-              <button style={styles.navBtn(page==="admin")} onClick={() => setPage("admin")}>Admin</button>
-            ) : (
-              playerTabs.map(([key, label]) => <button key={key} style={styles.navBtn(page===key)} onClick={() => setPage(key)}>{label}</button>)
-            )}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 13, color: "rgba(232
+              <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {TEAMS.map(t => (
+                  <div key={t} style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: 6, borderRadius: 6 }}>
+                    <span style={{ flex: 1, fontSize: 12 }}>{t}</span>
+                    <input type="number" step="0.01" style={{ ...styles.input, width: 70 }} value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminUpdateChampionOdds(t, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {adminTab === "players" && (
+            <div>
+              {Object.keys(users).map(k => {
+                const u = users[k];
+                return (
+                  <div key={k} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div><strong>{u.username}</strong> {u.isAdmin && "(Admin)"} — Choice: {u.championPick}</div>
+                    {!u.isAdmin && <button style={styles.btn("danger")} onClick={() => adminDeleteUser(k)}>Delete Account</button>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
