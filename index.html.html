@@ -8,17 +8,18 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   html, body, #root { margin: 0; padding: 0; min-height: 100vh; background: #0a0e1a; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   * { box-sizing: border-box; }
   input, select, button { font-family: inherit; }
+  
+  /* ⚡ STYLISH INITIAL LOADING BLANKET */
   #loader {
     position: fixed; inset: 0; background: #0a0e1a; color: #f5c842;
     display: flex; align-items: center; justify-content: center; flex-direction: column;
-    gap: 14px; font-weight: 700; z-index: 9999;
-    transition: opacity 0.3s;
+    gap: 14px; font-weight: 700; font-size: 15px; z-index: 9999;
+    transition: opacity 0.3s ease;
   }
   #loader.hidden { opacity: 0; pointer-events: none; }
   .spinner {
@@ -30,41 +31,49 @@
 </style>
 </head>
 <body>
+
 <div id="loader">
   <div class="spinner"></div>
-  <div>⚽ Loading Dobribet Cloud Backend...</div>
+  <div>⚽ Loading Dobribet...</div>
 </div>
+
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect } = React;
 
-// 🔗 PLUGGED INTO YOUR CLOUD DATABASE
-const SUPABASE_URL = "https://mfvwumillzpofmvjibkp.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_QUjFKlHhgcIgisSV-SESdg_49GIA0c0";
-const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-const ADMIN_USERNAME = "dobrinescu";
-
 const TEAMS = [
-  "United States","Canada","Mexico","Argentina","Brazil","Colombia","Ecuador","Paraguay","Uruguay",
-  "England","France","Croatia","Norway","Portugal","Germany","Netherlands","Austria","Belgium",
-  "Scotland","Spain","Switzerland","Sweden","Türkiye","Bosnia and Herzegovina","Czechia",
-  "Algeria","Cabo Verde","Côte d'Ivoire","Egypt","Ghana","Morocco","Senegal","South Africa","Tunisia","DR Congo",
-  "Australia","Iran","Japan","Jordan","South Korea","Qatar","Saudi Arabia","Uzbekistan","Iraq",
-  "Curaçao","Haiti","Panama","New Zealand"
+  "United States", "Canada", "Mexico", "Argentina", "Brazil", "Colombia", "Ecuador", "Paraguay", "Uruguay",
+  "England", "France", "Croatia", "Norway", "Portugal", "Germany", "Netherlands", "Austria", "Belgium",
+  "Scotland", "Spain", "Switzerland", "Sweden", "Türkiye", "Bosnia and Herzegovina", "Czechia",
+  "Algeria", "Cabo Verde", "Côte d'Ivoire", "Egypt", "Ghana", "Morocco", "Senegal", "South Africa", "Tunisia", "DR Congo",
+  "Australia", "Iran", "Japan", "Jordan", "South Korea", "Qatar", "Saudi Arabia", "Uzbekistan", "Iraq",
+  "Curaçao", "Haiti", "Panama", "New Zealand"
 ];
 
-const TOURNAMENT_OPTIONS = ["World Cup 2026","Euro 2028","World Cup 2030","Other"];
+const TOURNAMENT_OPTIONS = ["World Cup 2026", "Euro 2028", "World Cup 2030", "Other"];
 
 function App() {
-  // Application Global Real-Time State
-  const [session, setSession] = useState(null); // Holds current authenticated Supabase Auth session
-  const [profiles, setProfiles] = useState({}); // Mapping of profile rows from DB
-  const [currentUserProfile, setCurrentUserProfile] = useState(null);
-  const [matches, setMatches] = useState([]);
-  const [tournamentConfig, setTournamentConfig] = useState({ tournament_name: "World Cup 2026", tournament_winner: null, champion_odds: {} });
-  
+  const [session, setSession] = useState(() => {
+    const saved = localStorage.getItem("dobribet_session");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [users, setUsers] = useState(() => {
+    const saved = localStorage.getItem("dobribet_users");
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [matches, setMatches] = useState(() => {
+    const saved = localStorage.getItem("dobribet_matches");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [tournamentConfig, setTournamentConfig] = useState(() => {
+    const saved = localStorage.getItem("dobribet_config");
+    return saved ? JSON.parse(saved) : { tournament_name: "World Cup 2026", tournament_winner: null, champion_odds: {} };
+  });
+
   const [page, setPage] = useState("home");
   const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({});
@@ -72,7 +81,6 @@ function App() {
   const [adminTab, setAdminTab] = useState("matches");
   const [toast, setToast] = useState("");
   const [tick, setTick] = useState(0);
-  const [loading, setLoading] = useState(true);
 
   // Layout Filters and Form state
   const [scheduleFilter, setScheduleFilter] = useState("ALL");
@@ -86,99 +94,42 @@ function App() {
   const [bulkGroup, setBulkGroup] = useState("");
   const [addError, setAddError] = useState("");
 
+  // Dismiss loading blanket right after component initializes successfully
+  useEffect(() => {
+    const loader = document.getElementById("loader");
+    if (loader) {
+      loader.classList.add("hidden");
+    }
+  }, []);
+
+  // Sync state to local storage
+  useEffect(() => { localStorage.setItem("dobribet_users", JSON.stringify(users)); }, [users]);
+  useEffect(() => { localStorage.setItem("dobribet_matches", JSON.stringify(matches)); }, [matches]);
+  useEffect(() => { localStorage.setItem("dobribet_config", JSON.stringify(tournamentConfig)); }, [tournamentConfig]);
+  useEffect(() => {
+    if (session) {
+      localStorage.setItem("dobribet_session", JSON.stringify(session));
+    } else {
+      localStorage.removeItem("dobribet_session");
+    }
+  }, [session]);
+
   // Periodical countdown refresher
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 15000);
     return () => clearInterval(id);
   }, []);
 
-  // Sync state on load and monitor authentication session changes
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      fetchData(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      fetchData(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Master fetch utility to sync cloud records down into React
-  async function fetchData(currentSession) {
-    try {
-      // 1. Fetch matches
-      const { data: matchesData } = await supabase.from('matches').select('*');
-      if (matchesData) {
-        // map db names into UI fields smoothly
-        const normalizedMatches = matchesData.map(m => ({
-          id: m.id, team1: m.team1, team2: m.team2,
-          date: m.match_date, time: m.match_time,
-          odds1: m.odds1, oddsX: m.oddsx, odds2: m.odds2,
-          result: m.result, group: m.tournament_stage
-        }));
-        setMatches(normalizedMatches);
-      }
-
-      // 2. Fetch config
-      const { data: configData } = await supabase.from('tournament_config').select('*').eq('id', 1).single();
-      if (configData) {
-        setTournamentConfig({
-          tournament_name: configData.tournament_name,
-          tournament_winner: configData.tournament_winner,
-          champion_odds: configData.champion_odds || {}
-        });
-      }
-
-      // 3. Fetch player profiles
-      const { data: profilesData } = await supabase.from('profiles').select('*');
-      if (profilesData) {
-        const profileMap = {};
-        profilesData.forEach(p => {
-          profileMap[p.id] = {
-            id: p.id,
-            username: p.username,
-            isAdmin: p.is_admin,
-            championPick: p.champion_pick,
-            picks: p.picks || {},
-            joinedAt: p.created_at
-          };
-        });
-        setProfiles(profileMap);
-
-        if (currentSession?.user) {
-          const userProf = profileMap[currentSession.user.id];
-          setCurrentUserProfile(userProf);
-          
-          // Auto route to panels if logged in and on fallback landing page
-          if (page === "home" || page === "auth") {
-            setPage(userProf?.isAdmin ? "admin" : "leaderboard");
-          }
-        } else {
-          setCurrentUserProfile(null);
-        }
-      }
-    } catch (err) {
-      console.error("Data synchronization error:", err);
-    } finally {
-      setLoading(false);
-      const loader = document.getElementById("loader");
-      if (loader) { loader.classList.add("hidden"); }
-    }
-  }
-
   function showToast(msg) {
     setToast(msg);
     setTimeout(() => setToast(""), 2800);
   }
 
-  const isAdmin = currentUserProfile?.isAdmin;
+  const currentUser = session ? users[session.username] : null;
+  const isAdmin = currentUser?.isAdmin;
 
   function computeLeaderboard() {
-    return Object.values(profiles)
+    return Object.values(users)
       .filter(u => !u.isAdmin)
       .map(u => {
         let pts = 0;
@@ -196,77 +147,44 @@ function App() {
       .sort((a, b) => b.computedPoints - a.computedPoints);
   }
 
-  async function handleLogin() {
-    if (!form.username || !form.password) {
-      setError("Username and password are required.");
-      return;
-    }
+  function handleLogin() {
+    if (!form.username || !form.password) { setError("Fields required."); return; }
+    const uname = form.username.trim().toLowerCase();
+    const user = users[uname];
+    if (!user || user.password !== form.password) { setError("Invalid credentials."); return; }
     setError("");
-    const email = `${form.username.toLowerCase().trim()}@dobribet.local`;
-    
-    const { data, error: authErr } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: form.password,
-    });
-
-    if (authErr) {
-      setError("Invalid username or password.");
-      return;
-    }
+    setSession({ username: uname });
     setForm({});
+    setPage(user.isAdmin ? "admin" : "leaderboard");
   }
 
-  async function handleRegister() {
-    if (!form.username || !form.password || !form.password2) {
-      setError("All fields required."); return;
-    }
-    if (form.password !== form.password2) {
-      setError("Passwords don't match."); return;
-    }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters long."); return;
-    }
-    const uname = form.username.toLowerCase().trim();
-    if (uname === ADMIN_USERNAME) { setError("Username restricted."); return; }
-    if (!form.championPick) { setError("Please pick your champion."); return; }
+  function handleRegister() {
+    if (!form.username || !form.password || !form.password2) { setError("All fields required."); return; }
+    if (form.password !== form.password2) { setError("Passwords don't match."); return; }
+    const uname = form.username.trim().toLowerCase();
+    if (users[uname]) { setError("Username taken."); return; }
+    if (!form.championPick && uname !== "dobrinescu") { setError("Please pick your champion."); return; }
 
     setError("");
-    const fakeEmail = `${uname}@dobribet.local`;
-
-    // 1. Create safe entry inside Supabase Auth Engine
-    const { data: authData, error: signupErr } = await supabase.auth.signUp({
-      email: fakeEmail,
+    const isFirstAdmin = uname === "dobrinescu" && form.password === "admin123";
+    
+    const newUser = {
+      username: form.username.trim(),
       password: form.password,
-    });
+      isAdmin: isFirstAdmin,
+      championPick: form.championPick || null,
+      picks: {}
+    };
 
-    if (signupErr) {
-      setError(signupErr.message.includes("already registered") ? "Username taken." : signupErr.message);
-      return;
-    }
-
-    if (authData?.user) {
-      // 2. Insert player profile link row
-      const isFirstAdmin = uname === ADMIN_USERNAME;
-      const { error: profileErr } = await supabase.from('profiles').insert([{
-        id: authData.user.id,
-        username: uname,
-        is_admin: isFirstAdmin,
-        champion_pick: form.championPick,
-        picks: {}
-      }]);
-
-      if (profileErr) {
-        setError("Error setting up player profile data.");
-        return;
-      }
-
-      showToast(`Welcome ${uname}! Account registered securely! 🏆`);
-      setForm({});
-    }
+    setUsers(prev => ({ ...prev, [uname]: newUser }));
+    setSession({ username: uname });
+    setForm({});
+    setPage(isFirstAdmin ? "admin" : "leaderboard");
+    showToast(`Welcome ${newUser.username}! Account active!`);
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
+  function handleLogout() {
+    setSession(null);
     setPage("home");
   }
 
@@ -286,124 +204,73 @@ function App() {
     return "<1m";
   };
 
-  async function makePick(matchId, pick) {
+  function makePick(matchId, pick) {
     const m = matches.find(x => x.id === matchId);
     if (!m) return;
-    if (isLocked(m)) {
-      showToast("⛔ Picks are locked — the match has already started.");
-      return;
-    }
+    if (isLocked(m)) { showToast("⛔ Picks locked — match started."); return; }
 
-    const updatedPicks = { ...currentUserProfile.picks, [matchId]: pick };
-    
-    // Cloud upsert pick profile patch
-    const { error: updateErr } = await supabase
-      .from('profiles')
-      .update({ picks: updatedPicks })
-      .eq('id', session.user.id);
-
-    if (updateErr) {
-      showToast("⛔ Database sync error saving pick.");
-      return;
-    }
-
-    // Update state locally
-    setProfiles(prev => ({
-      ...prev,
-      [session.user.id]: { ...prev[session.user.id], picks: updatedPicks }
-    }));
-    setCurrentUserProfile(p => ({ ...p, picks: updatedPicks }));
-
+    setUsers(prev => {
+      const u = { ...prev[session.username] };
+      u.picks = { ...u.picks, [matchId]: pick };
+      return { ...prev, [session.username]: u };
+    });
     showToast(`Pick saved: ${pick === "1" ? m.team1 : pick === "2" ? m.team2 : "Draw"}`);
   }
 
-  // Admin Cloud Operations
-  async function adminAddMatch() {
+  // Admin Operations
+  function adminAddMatch() {
     if (!bulkTeam1 || !bulkTeam2 || !bulkDate || !bulkOdds1 || !bulkOddsX || !bulkOdds2) {
       setAddError("Fill all fields."); return;
     }
     const id = `m_${Date.now()}`;
-    const newMatchRow = {
-      id,
-      team1: bulkTeam1,
-      team2: bulkTeam2,
-      match_date: bulkDate,
-      match_time: bulkTime || "20:00",
-      odds1: parseFloat(bulkOdds1),
-      oddsx: parseFloat(bulkOddsX),
-      odds2: parseFloat(bulkOdds2),
-      tournament_stage: bulkGroup || "",
-      result: null
+    const newMatch = {
+      id, team1: bulkTeam1, team2: bulkTeam2,
+      date: bulkDate, time: bulkTime || "20:00",
+      odds1: parseFloat(bulkOdds1), oddsX: parseFloat(bulkOddsX), odds2: parseFloat(bulkOdds2),
+      group: bulkGroup || "", result: null
     };
-
-    const { error: insertErr } = await supabase.from('matches').insert([newMatchRow]);
-    if (insertErr) {
-      setAddError("Database entry failure.");
-      return;
-    }
-
+    setMatches(prev => [...prev, newMatch]);
     setBulkTeam1(""); setBulkTeam2(""); setBulkOdds1(""); setBulkOddsX(""); setBulkOdds2(""); setBulkGroup("");
     setAddError("");
-    fetchData(session);
-    showToast("Match safely broadcasted to cloud!");
+    showToast("Match safely scheduled!");
   }
 
-  async function adminSetResult(matchId, result) {
-    const { error: updateErr } = await supabase
-      .from('matches')
-      .update({ result: result })
-      .eq('id', matchId);
-
-    if (updateErr) {
-      showToast("⛔ Could not publish match outcome.");
-      return;
-    }
-    fetchData(session);
-    showToast("Result published successfully!");
+  function adminSetResult(matchId, result) {
+    setMatches(prev => prev.map(m => m.id === matchId ? { ...m, result } : m));
+    showToast("Result published!");
   }
 
-  async function adminUndoResult(matchId) {
-    await supabase.from('matches').update({ result: null }).eq('id', matchId);
-    fetchData(session);
+  function adminUndoResult(matchId) {
+    setMatches(prev => prev.map(m => m.id === matchId ? { ...m, result: null } : m));
     showToast("Result reverted.");
   }
 
-  async function adminDeleteMatch(matchId) {
-    const m = matches.find(x => x.id === matchId);
-    if (!m) return;
-    if (!window.confirm(`Delete this match completely from cloud?`)) return;
-    
-    await supabase.from('matches').delete().eq('id', matchId);
-    fetchData(session);
-    showToast("Match removed.");
+  function adminDeleteMatch(matchId) {
+    if (!window.confirm("Delete match?")) return;
+    setMatches(prev => prev.filter(m => m.id !== matchId));
   }
 
-  async function adminDeleteUser(userId, username) {
-    if (!window.confirm(`Permanently wipe player "${username}" profiles from cloud?`)) return;
-    // Removing user profile directly cascade triggers inside our schema
-    await supabase.from('profiles').delete().eq('id', userId);
-    fetchData(session);
-    showToast(`Player "${username}" records deleted.`);
+  function adminDeleteUser(uname) {
+    if (!window.confirm(`Wipe account "${uname}"?`)) return;
+    setUsers(prev => {
+      const copy = { ...prev };
+      delete copy[uname];
+      return copy;
+    });
   }
 
-  async function adminUpdateConfig(name, winner) {
-    await supabase.from('tournament_config').update({
-      tournament_name: name,
-      tournament_winner: winner
-    }).eq('id', 1);
-    fetchData(session);
-    showToast("Global tournament settings updated.");
+  function adminUpdateConfig(name, winner) {
+    setTournamentConfig(prev => ({ ...prev, tournament_name: name, tournament_winner: winner }));
   }
 
-  async function adminUpdateChampionOdds(team, val) {
-    const freshOdds = { ...tournamentConfig.champion_odds };
-    if (val === "") delete freshOdds[team]; else freshOdds[team] = parseFloat(val);
-    
-    await supabase.from('tournament_config').update({ champion_odds: freshOdds }).eq('id', 1);
-    setTournamentConfig(prev => ({ ...prev, champion_odds: freshOdds }));
+  function adminUpdateChampionOdds(team, val) {
+    setTournamentConfig(prev => {
+      const odds = { ...prev.champion_odds };
+      if (val === "") delete odds[team]; else odds[team] = parseFloat(val);
+      return { ...prev, champion_odds: odds };
+    });
   }
 
-  // Pre-compiled filtered views 
   const pickableMatches = matches.filter(m => !isLocked(m)).sort((a, b) => kickoffDate(a) - kickoffDate(b));
   const nextMatchday = pickableMatches.slice(0, 10);
   const matchesAwaitingResult = matches.filter(m => !m.result && kickoffDate(m) <= new Date()).sort((a, b) => kickoffDate(a) - kickoffDate(b));
@@ -413,25 +280,25 @@ function App() {
   const flagEmoji = (team) => {
     const flags = {
       "United States":"🇺🇸","Canada":"🇨🇦","Mexico":"🇲🇽","Argentina":"🇦🇷","Brazil":"🇧🇷","Colombia":"🇨🇴","Ecuador":"🇪🇨","Paraguay":"🇵🇾","Uruguay":"🇺🇾",
-      "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","France":"🇫🇷","Croatia":"🇭🇷","Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
-      "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷","Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿",
+      "England":"🏴%20󠁶%20󠁾%20󠁲%20󠁢%20󠁿","France":"🇫🇷","Croatia":"🇭🇷","Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
+      "Scotland":"🏴%20󠁶%20󠁾%20󠁳%20󠁣%20󠁴%20󠁿","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷","Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿",
       "Algeria":"🇩🇿","Cabo Verde":"🇨🇻","Côte d'Ivoire":"🇨🇮","Egypt":"🇪🇬","Ghana":"🇬🇭","Morocco":"🇲🇦","Senegal":"🇸🇳","South Africa":"🇿🇦","Tunisia":"🇹🇳","DR Congo":"🇨🇩",
       "Australia":"🇦🇺","Iran":"🇮🇷","Japan":"🇯🇵","Jordan":"🇯🇴","South Korea":"🇰🇷","Qatar":"🇶🇦","Saudi Arabia":"🇸🇦","Uzbekistan":"🇺🇿","Iraq":"🇮🇶",
       "Curaçao":"🇨🇼","Haiti":"🇭🇹","Panama":"🇵🇦","New Zealand":"🇳🇿"
     };
-    return flags[team] || "🏳";
+    return flags[team] || "🏳️";
   };
 
   const styles = {
     app: { minHeight: "100vh", background: "#0a0e1a", color: "#e8eaf0", fontFamily: "'Outfit', 'Segoe UI', sans-serif" },
-    nav: { background: "rgba(10,14,26,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 24px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
-    logo: { fontWeight: 800, fontSize: 22, color: "#f5c842", letterSpacing: "-0.5px", marginRight: "auto", cursor: "pointer" },
-    navBtn: (active) => ({ background: active ? "rgba(245,200,66,0.12)" : "transparent", border: "none", color: active ? "#f5c842" : "rgba(232,234,240,0.6)", padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13.5, fontWeight: active ? 600 : 400, transition: "all 0.15s" }),
+    nav: { background: "rgba(10,14,26,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
+    logo: { fontWeight: 800, fontSize: 20, color: "#f5c842", letterSpacing: "-0.5px", marginRight: "auto", cursor: "pointer" },
+    navBtn: (active) => ({ background: active ? "rgba(245,200,66,0.12)" : "transparent", border: "none", color: active ? "#f5c842" : "rgba(232,234,240,0.6)", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400 }),
     hero: { padding: "80px 24px 60px", maxWidth: 820, margin: "0 auto", textAlign: "center" },
     heroTitle: { fontSize: 56, fontWeight: 800, color: "#f5c842", margin: "0 0 12px", lineHeight: 1.1, letterSpacing: "-2px" },
     heroSub: { fontSize: 18, color: "rgba(232,234,240,0.6)", margin: "0 0 48px" },
     card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px 24px", marginBottom: 16 },
-    btn: (variant="primary") => ({ background: variant === "primary" ? "#f5c842" : variant === "danger" ? "#e24b4b" : "rgba(255,255,255,0.07)", color: variant === "primary" ? "#0a0e1a" : "#e8eaf0", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "opacity 0.15s" }),
+    btn: (variant="primary") => ({ background: variant === "primary" ? "#f5c842" : variant === "danger" ? "#e24b4b" : "rgba(255,255,255,0.07)", color: variant === "primary" ? "#0a0e1a" : "#e8eaf0", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer" }),
     pickBtn: (selected, type) => {
       const colors = { "1": "#4caf50", "X": "#f5c842", "2": "#2196f3" };
       return { background: selected ? colors[type] : "rgba(255,255,255,0.06)", color: selected ? "#0a0e1a" : "#e8eaf0", border: `1.5px solid ${selected ? colors[type] : "rgba(255,255,255,0.12)"}`, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13, minWidth: 52 };
@@ -450,7 +317,7 @@ function App() {
     <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#f5c842", color: "#0a0e1a", padding: "12px 24px", borderRadius: 12, fontWeight: 700, fontSize: 14, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>{toast}</div>
   ) : null;
 
-  // ---- RENDER VIEWS ----
+  // ---- VIEWS ----
 
   function LandingPage() {
     return (
@@ -458,13 +325,13 @@ function App() {
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <div style={{ fontSize: 48, marginBottom: 8 }}>⚽</div>
         <h1 style={styles.heroTitle}>Dobribet</h1>
-        <p style={styles.heroSub}>The ultimate football prediction game. Sourced securely from cloud servers.</p>
+        <p style={styles.heroSub}>The ultimate football prediction arena with friends.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, marginBottom: 48, textAlign: "left" }}>
           {[
             ["⚽", "Pick the result", "Choose 1, X, or 2 for each match before kickoff."],
-            ["📊", "Real odds, real stakes", "Correct picks earn you those fractional odds straight as points."],
-            ["🏆", "Predict the champion", "Pick your tournament champion. Big rewards unlocked at final whistles."],
-            ["🥇", "Climb the leaderboard", "Compete live with friends across multiple locations simultaneously."],
+            ["📊", "Earn fractional points", "Correct picks score points matching the dynamic match odds."],
+            ["🏆", "Crown the champion", "Predict your tournament winner for custom bonus points."],
+            ["🥇", "Dominate rankings", "Scale the local bracket and out-smart your competition."],
           ].map(([icon, title, desc]) => (
             <div key={title} style={{ ...styles.card, padding: "18px 20px" }}>
               <div style={{ fontSize: 26, marginBottom: 8 }}>{icon}</div>
@@ -510,9 +377,9 @@ function App() {
               <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} /></div>
               <div><label style={styles.label}>Confirm password</label><input style={styles.input} type="password" value={form.password2||""} onChange={e=>setForm(p=>({...p,password2:e.target.value}))} /></div>
               <div>
-                <label style={styles.label}>🏆 Tournament champion prediction</label>
+                <label style={styles.label}>🏆 Champion prediction</label>
                 <select style={styles.input} value={form.championPick||""} onChange={e=>setForm(p=>({...p,championPick:e.target.value}))}>
-                  <option value="">Pick the winner...</option>
+                  <option value="">Pick team...</option>
                   {TEAMS.map(t=><option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
                 </select>
               </div>
@@ -527,38 +394,37 @@ function App() {
 
   function LeaderboardPage() {
     const lb = leaderboard;
-    const myRank = session?.user ? lb.findIndex(u => u.id === session.user.id) + 1 : 0;
-    
+    const myRank = lb.findIndex(u => u.username === session?.username) + 1;
     return (
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 28 }}>
           <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Leaderboard</h2>
-          <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} — {lb.length} players</p>
+          <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} · {lb.length} players</p>
         </div>
 
         {tournamentConfig.tournament_winner && (
           <div style={{ ...styles.card, background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.25)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ fontSize: 28 }}>🏆</div>
             <div>
-              <div style={{ fontWeight: 700, color: "#f5c842" }}>Tournament winner: {flagEmoji(tournamentConfig.tournament_winner)} {tournamentConfig.tournament_winner}</div>
+              <div style={{ fontWeight: 700, color: "#f5c842" }}>Official champion: {flagEmoji(tournamentConfig.tournament_winner)} {tournamentConfig.tournament_winner}</div>
             </div>
           </div>
         )}
 
-        {currentUserProfile && myRank > 0 && (
+        {currentUser && myRank > 0 && (
           <div style={{ ...styles.card, background: "rgba(245,200,66,0.06)", border: "1px solid rgba(245,200,66,0.2)", marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>Your position</div>
-                <div style={{ fontWeight: 800, fontSize: 20 }}>#{myRank} — {currentUserProfile.username}</div>
+                <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>Your bracket position</div>
+                <div style={{ fontWeight: 800, fontSize: 20 }}>#{myRank} — {currentUser.username}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#f5c842" }}>{(lb.find(x=>x.id===session.user.id)?.computedPoints || 0).toFixed(2)}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "#f5c842" }}>{(lb.find(x=>x.username===session.username)?.computedPoints || 0).toFixed(2)}</div>
                 <div style={{ fontSize: 11, color: "rgba(232,234,240,0.4)" }}>pts</div>
               </div>
             </div>
             <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-              <span style={styles.badge("gold")}>🏆 {currentUserProfile.championPick || "No pick"}</span>
+              <span style={styles.badge("gold")}>🏆 {currentUser.championPick || "No choice"}</span>
             </div>
           </div>
         )}
@@ -566,7 +432,7 @@ function App() {
         {lb.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
             {lb.slice(0,3).map((u, i) => (
-              <div key={u.id} style={{ ...styles.card, background: styles.podium[i]?.bg, border: `1px solid ${styles.podium[i]?.border}`, textAlign: "center", padding: "16px 12px" }}>
+              <div key={u.username} style={{ ...styles.card, background: styles.podium[i]?.bg, border: `1px solid ${styles.podium[i]?.border}`, textAlign: "center", padding: "16px 12px" }}>
                 <div style={{ fontSize: 26, marginBottom: 4 }}>{styles.podium[i]?.rank}</div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: styles.podium[i]?.color, marginBottom: 2 }}>{u.username}</div>
                 <div style={{ fontSize: 20, fontWeight: 800 }}>{u.computedPoints.toFixed(2)}</div>
@@ -577,7 +443,7 @@ function App() {
         )}
 
         {lb.slice(3).map((u, i) => (
-          <div key={u.id} style={{ ...styles.card, display: "flex", alignItems: "center", gap: 14, padding: "14px 20px" }}>
+          <div key={u.username} style={{ ...styles.card, display: "flex", alignItems: "center", gap: 14, padding: "14px 20px" }}>
             <div style={{ width: 28, textAlign: "center", fontWeight: 700, color: "rgba(232,234,240,0.3)" }}>#{i+4}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</div>
@@ -595,13 +461,13 @@ function App() {
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 28 }}>
           <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Next matchday</h2>
-          <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>⏱ Picks lock the moment a match kicks off</p>
+          <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>⏱ Picks lock automatically at match kickoff</p>
         </div>
         {nextMatchday.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(232,234,240,0.3)" }}>No upcoming matches with odds yet. Check back soon!</div>
+          <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(232,234,240,0.3)" }}>No upcoming fixtures with odds. Check back soon!</div>
         ) : (
           nextMatchday.map(m => {
-            const userPick = currentUserProfile?.picks?.[m.id];
+            const userPick = currentUser?.picks?.[m.id];
             const cd = countdown(m);
             return (
               <div key={m.id} style={styles.card}>
@@ -636,16 +502,16 @@ function App() {
           <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Results</h2>
         </div>
         {pastMatches.map(m => {
-          const userPick = currentUserProfile?.picks?.[m.id];
+          const userPick = currentUser?.picks?.[m.id];
           const correct = userPick === m.result;
           return (
             <div key={m.id} style={{ ...styles.card, background: correct ? "rgba(76,175,80,0.05)" : "rgba(255,255,255,0.04)" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 800 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                <div style={{ color: "#f5c842", fontWeight: 700 }}>Result: {m.result}</div>
+                <div style={{ color: "#f5c842", fontWeight: 700 }}>Outcome: {m.result}</div>
               </div>
               <div style={{ marginTop: 10 }}>
-                {userPick ? <span style={styles.badge(correct ? "green" : "")}>Your pick: {userPick}</span> : <span>No pick made</span>}
+                {userPick ? <span style={styles.badge(correct ? "green" : "")}>Your selection: {userPick}</span> : <span>No prediction logged</span>}
               </div>
             </div>
           );
@@ -695,10 +561,10 @@ function App() {
         {adminTab === "matches" && (
           <div>
             <div style={styles.card}>
-              <div style={{ fontWeight: 700, marginBottom: 16 }}>Add Match Form</div>
+              <div style={{ fontWeight: 700, marginBottom: 16 }}>Schedule Single Match</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <select style={styles.input} value={bulkTeam1} onChange={e=>setBulkTeam1(e.target.value)}><option value="">Home...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
-                <select style={styles.input} value={bulkTeam2} onChange={e=>setBulkTeam2(e.target.value)}><option value="">Away...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
+                <select style={styles.input} value={bulkTeam1} onChange={e=>setBulkTeam1(e.target.value)}><option value="">Home team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
+                <select style={styles.input} value={bulkTeam2} onChange={e=>setBulkTeam2(e.target.value)}><option value="">Away team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
                 <input type="date" style={styles.input} value={bulkDate} onChange={e=>setBulkDate(e.target.value)} />
                 <input type="time" style={styles.input} value={bulkTime} onChange={e=>setBulkTime(e.target.value)} />
                 <input type="number" step="0.01" style={styles.input} placeholder="Odds 1" value={bulkOdds1} onChange={e=>setBulkOdds1(e.target.value)} />
@@ -707,7 +573,7 @@ function App() {
                 <input style={styles.input} placeholder="Stage (e.g. Group A)" value={bulkGroup} onChange={e=>setBulkGroup(e.target.value)} />
               </div>
               {addError && <div style={{ color: "#e24b4b", marginTop: 8 }}>{addError}</div>}
-              <button style={{ ...styles.btn("primary"), marginTop: 16 }} onClick={adminAddMatch}>Add match to Cloud</button>
+              <button style={{ ...styles.btn("primary"), marginTop: 16 }} onClick={adminAddMatch}>Add match</button>
             </div>
 
             {matches.filter(m => !m.result).map(m => (
@@ -733,7 +599,7 @@ function App() {
             ))}
             {pastMatches.map(m => (
               <div key={m.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between" }}>
-                <div>{m.team1} vs {m.team2} [Outcome: {m.result}]</div>
+                <div>{m.team1} vs {m.team2} [Winner: {m.result}]</div>
                 <button style={styles.btn("ghost")} onClick={() => adminUndoResult(m.id)}>Undo</button>
               </div>
             ))}
@@ -742,12 +608,12 @@ function App() {
 
         {adminTab === "tournament" && (
           <div style={styles.card}>
-            <label style={styles.label}>Tournament Settings Name</label>
+            <label style={styles.label}>Tournament Headline</label>
             <input style={{ ...styles.input, marginBottom: 14 }} value={tournamentConfig.tournament_name} onChange={e => adminUpdateConfig(e.target.value, tournamentConfig.tournament_winner)} />
             
-            <label style={styles.label}>Tournament Winner Champion</label>
+            <label style={styles.label}>Set Decided Tournament Winner</label>
             <select style={styles.input} value={tournamentConfig.tournament_winner || ""} onChange={e => adminUpdateConfig(tournamentConfig.tournament_name, e.target.value || null)}>
-              <option value="">Undecided</option>
+              <option value="">Tournament Ongoing</option>
               {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
 
@@ -764,12 +630,15 @@ function App() {
 
         {adminTab === "players" && (
           <div>
-            {Object.values(profiles).map(u => (
-              <div key={u.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div><strong>{u.username}</strong> {u.isAdmin && "(Admin)"} — Choice: {u.championPick}</div>
-                {!u.isAdmin && <button style={styles.btn("danger")} onClick={() => adminDeleteUser(u.id, u.username)}>Wipe Account</button>}
-              </div>
-            ))}
+            {Object.keys(users).map(k => {
+              const u = users[k];
+              return (
+                <div key={k} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div><strong>{u.username}</strong> {u.isAdmin && "(Admin)"} — Choice: {u.championPick}</div>
+                  {!u.isAdmin && <button style={styles.btn("danger")} onClick={() => adminDeleteUser(k)}>Delete Account</button>}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -786,34 +655,31 @@ function App() {
         {session ? (
           <>
             {isAdmin ? (
-              <button style={styles.navBtn(page==="admin")} onClick={() => setPage("admin")}>Admin Panel</button>
+              <button style={styles.navBtn(page==="admin")} onClick={() => setPage("admin")}>Admin</button>
             ) : (
               playerTabs.map(([key, label]) => <button key={key} style={styles.navBtn(page===key)} onClick={() => setPage(key)}>{label}</button>)
             )}
-            <div style={{ marginLeft: 12, display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 13, color: "rgba(232,234,240,0.4)" }}>{currentUserProfile?.username}</span>
-              <button style={{ ...styles.btn("ghost"), padding: "7px 14px", fontSize: 13 }} onClick={handleLogout}>Sign out</button>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, color: "rgba(232,234,240,0.4)" }}>{currentUser?.username}</span>
+              <button style={{ ...styles.btn("ghost"), padding: "6px 12px", fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }} onClick={handleLogout}>Logout</button>
             </div>
           </>
         ) : (
           <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...styles.btn("ghost"), padding: "7px 16px", fontSize: 13 }} onClick={() => { setAuthMode("login"); setPage("auth"); }}>Sign in</button>
-            <button style={{ ...styles.btn("primary"), padding: "7px 16px", fontSize: 13 }} onClick={() => { setAuthMode("register"); setPage("auth"); }}>Join</button>
+            <button style={{ ...styles.btn("ghost"), padding: "6px 12px", fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }} onClick={() => { setAuthMode("login"); setPage("auth"); }}>Sign in</button>
+            <button style={{ ...styles.btn("primary"), padding: "6px 12px", fontSize: 13 }} onClick={() => { setAuthMode("register"); setPage("auth"); }}>Join</button>
           </div>
         )}
       </nav>
 
-      {loading ? null : (
-        <>
-          {!session && page === "home" && LandingPage()}
-          {!session && page === "auth" && AuthPage()}
-          {session && !isAdmin && page === "leaderboard" && LeaderboardPage()}
-          {session && !isAdmin && page === "picks" && NextMatchdayPage()}
-          {session && !isAdmin && page === "results" && PastMatchesPage()}
-          {session && !isAdmin && page === "schedule" && SchedulePage()}
-          {session && isAdmin && AdminPage()}
-        </>
-      )}
+      {/* Render selected app pages */}
+      {!session && page === "home" && LandingPage()}
+      {!session && page === "auth" && AuthPage()}
+      {session && !isAdmin && page === "leaderboard" && LeaderboardPage()}
+      {session && !isAdmin && page === "picks" && NextMatchdayPage()}
+      {session && !isAdmin && page === "results" && PastMatchesPage()}
+      {session && !isAdmin && page === "schedule" && SchedulePage()}
+      {session && isAdmin && AdminPage()}
     </div>
   );
 }
