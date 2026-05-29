@@ -128,14 +128,17 @@ function App() {
       if (dbProfiles) {
         const mappedUsers = {};
         dbProfiles.forEach(u => {
-          mappedUsers[u.username.toLowerCase()] = {
-            id: u.id,
-            username: u.username,
-            password: u.password,
-            isAdmin: u.is_admin || false,
-            championPick: u.champion_pick,
-            picks: u.picks || {}
-          };
+          const usernameKey = u.username ? u.username.toLowerCase().trim() : "";
+          if (usernameKey) {
+            mappedUsers[usernameKey] = {
+              id: u.id,
+              username: u.username,
+              password: u.password,
+              isAdmin: u.is_admin || false,
+              championPick: u.champion_pick || null,
+              picks: typeof u.picks === 'object' && u.picks !== null ? u.picks : {}
+            };
+          }
         });
         setUsers(mappedUsers);
       }
@@ -187,7 +190,7 @@ function App() {
       .map(u => {
         let pts = 0;
         matches.forEach(m => {
-          if (m.result && u.picks[m.id] === m.result) {
+          if (m.result && u.picks && u.picks[m.id] === m.result) {
             const odds = m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2;
             pts += parseFloat(odds) || 0;
           }
@@ -214,6 +217,7 @@ function App() {
   async function handleRegister() {
     if (!form.username || !form.password || !form.password2) { setError("All fields required."); return; }
     if (form.password !== form.password2) { setError("Passwords don't match."); return; }
+    
     const uname = form.username.trim().toLowerCase();
     if (users[uname]) { setError("Username taken."); return; }
     if (!form.championPick && uname !== "dobrinescu") { setError("Please pick your champion."); return; }
@@ -229,9 +233,13 @@ function App() {
       picks: {}
     };
 
-    const { error: regError } = await supabaseClient.from('profiles').insert([newProfileRow]);
+    const { error: regError } = await supabaseClient
+      .from('profiles')
+      .insert([newProfileRow]);
+
     if (regError) {
-      setError("Registration sync failure. Check schema constraints.");
+      console.error("Supabase Registration Error:", regError);
+      setError(`Registration sync failure: ${regError.message}`);
       return;
     }
 
@@ -268,7 +276,7 @@ function App() {
     if (!m) return;
     if (isLocked(m)) { showToast("⛔ Picks locked — match started."); return; }
 
-    const updatedPicks = { ...currentUser.picks, [matchId]: pick };
+    const updatedPicks = { ...(currentUser.picks || {}), [matchId]: pick };
 
     const { error: syncErr } = await supabaseClient
       .from('profiles')
