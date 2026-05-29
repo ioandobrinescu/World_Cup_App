@@ -133,6 +133,7 @@ function App() {
             mappedUsers[usernameKey] = {
               id: u.id,
               username: u.username,
+              password: u.password,
               isAdmin: u.is_admin || false,
               championPick: u.champion_pick || null,
               picks: typeof u.picks === 'object' && u.picks !== null ? u.picks : {}
@@ -202,23 +203,15 @@ function App() {
       .sort((a, b) => b.computedPoints - a.computedPoints);
   }
 
-  async function handleLogin() {
+  function handleLogin() {
     if (!form.username || !form.password) { setError("Fields required."); return; }
     const uname = form.username.trim().toLowerCase();
-    
-    const { data: userProfile, error: loginErr } = await supabaseClient
-      .rpc('verify_user_password', { target_username: form.username.trim(), input_password: form.password });
-
-    if (loginErr || !userProfile) {
-      setError("Invalid credentials.");
-      return;
-    }
-
+    const user = users[uname];
+    if (!user || user.password !== form.password) { setError("Invalid credentials."); return; }
     setError("");
     setSession({ username: uname });
     setForm({});
-    await fetchCloudData();
-    setPage(userProfile.is_admin ? "admin" : "leaderboard");
+    setPage(user.isAdmin ? "admin" : "leaderboard");
   }
 
   async function handleRegister() {
@@ -232,12 +225,19 @@ function App() {
     setError("");
     const isFirstAdmin = uname === "dobrinescu" && form.password === "admin123";
     
-    const { data: regData, error: regError } = await supabaseClient
-      .rpc('register_new_user', {
-        p_username: form.username.trim(),
-        p_password: form.password,
-        p_is_admin: isFirstAdmin,
-        p_champion_pick: form.championPick || null
+    const { data, error: regError } = await supabaseClient
+      .auth
+      .signUp({
+        email: `${uname}@pariuriwc2026.internal`,
+        password: form.password,
+        options: {
+          data: {
+            username: form.username.trim(),
+            is_admin: isFirstAdmin,
+            champion_pick: form.championPick || null,
+            picks: {}
+          }
+        }
       });
 
     if (regError) {
@@ -538,7 +538,7 @@ function App() {
               const cd = countdown(m);
               return (
                 <div key={m.id} style={styles.card}>
-                  <div style={{ display: "flex", justifycontent: "space-between", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: 17 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
                       <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)", marginTop: 3 }}>{m.match_date} · {m.match_time} {m.tournament_stage && `· ${m.tournament_stage}`}</div>
