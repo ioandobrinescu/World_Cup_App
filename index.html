@@ -808,7 +808,7 @@ function App() {
       const el = document.getElementById("loader");
       if (el) el.classList.add("hidden");
     });
-    const interval = setInterval(fetchAllData, 20000);
+    const interval = setInterval(fetchAllData, 8000);
     return () => clearInterval(interval);
   }, []);
 
@@ -975,7 +975,8 @@ function App() {
       matchday: matchForm.stage || "1", result: null, api_fixture_id: matchForm.apiFixtureId || null
     }]);
     setMatchForm({ team1: "", team2: "", date: "", time: "21:00", odds1: "", oddsX: "", odds2: "", stage: "", apiFixtureId: "" });
-    fetchAllData(); triggerToast("✅ Meci adăugat!");
+    await fetchAllData();
+    triggerToast("✅ Meci adăugat!");
   }
 
   async function adminForceResult(mid, res) {
@@ -1006,9 +1007,16 @@ function App() {
   const upcomingMatchesSorted = useMemo(() => matches.filter(m => !m.result).sort((a,b) => new Date(a.match_date+"T"+a.match_time) - new Date(b.match_date+"T"+b.match_time)), [matches]);
 
   const processedMatchdaySplit = useMemo(() => {
-    const future = upcomingMatchesSorted.filter(m => new Date(m.match_date+"T"+m.match_time) > new Date());
+    // Show ALL matches without a result — filter only hides completed ones
+    // Pick buttons lock based on match time, but the card stays visible always
+    const pending = upcomingMatchesSorted; // already filtered to no-result matches
     const unlocked = [], locked = [];
-    future.forEach(m => { if (currentUser?.picks?.[m.id]) locked.push(m); else unlocked.push(m); });
+    pending.forEach(m => {
+      const matchStarted = new Date(m.match_date + "T" + m.match_time) <= new Date();
+      // Locked = user already picked OR match has started
+      if (currentUser?.picks?.[m.id] || matchStarted) locked.push(m);
+      else unlocked.push(m);
+    });
     return { unlocked, locked };
   }, [upcomingMatchesSorted, currentUser]);
 
@@ -1243,14 +1251,27 @@ function App() {
                 <div className="section-label">Preziceri</div>
                 <div className="section-title">Meciuri</div>
               </div>
-              {isTournamentBegun && (
-                <div className="live-badge"><div className="live-dot"></div>LIVE</div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {isTournamentBegun && (
+                  <div className="live-badge"><div className="live-dot"></div>LIVE</div>
+                )}
+                <button
+                  onClick={() => fetchAllData().then(() => triggerToast("🔄 Actualizat!"))}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--muted)', borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.4px' }}
+                >
+                  ↻ Refresh
+                </button>
+              </div>
             </div>
 
             {processedMatchdaySplit.unlocked.length === 0 && processedMatchdaySplit.locked.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0', fontSize: 14 }}>
-                Niciun meci disponibil momentan.
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🏟️</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--white)' }}>Niciun meci programat</div>
+                <div style={{ fontSize: 13, marginBottom: 16 }}>Adminul nu a adăugat meciuri încă.</div>
+                <button onClick={() => fetchAllData().then(() => triggerToast("🔄 Actualizat!"))} style={{ background: 'var(--gold-dim)', border: '1px solid rgba(240,180,41,0.25)', color: 'var(--gold)', borderRadius: 20, padding: '8px 20px', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.5px' }}>
+                  ↻ Verifică din nou
+                </button>
               </div>
             )}
 
@@ -1304,11 +1325,14 @@ function App() {
             {processedMatchdaySplit.locked.map(m => {
               const distrib = computeGlobalBetDistribution(m.id);
               const sel = currentUser?.picks?.[m.id];
+              const matchStarted = new Date(m.match_date + "T" + m.match_time) <= new Date();
+              const lockReason = matchStarted ? '⏱ ÎN JOC' : '🔒 ALES';
+              const lockColor = matchStarted ? 'var(--red)' : 'var(--muted)';
               return (
-                <div key={m.id} className="card" style={{ opacity: 0.75 }}>
+                <div key={m.id} className="card" style={{ opacity: 0.78 }}>
                   <div className="match-header">
-                    <span>Etapa {m.matchday} · {m.match_date}</span>
-                    <span className="badge badge-muted">🔒 BLOCAT</span>
+                    <span>Etapa {m.matchday} · {m.match_date} · {m.match_time}</span>
+                    <span className="badge badge-muted" style={{ color: lockColor }}>{lockReason}</span>
                   </div>
                   <div className="match-teams">
                     <div className="match-team">
