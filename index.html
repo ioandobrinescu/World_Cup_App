@@ -55,6 +55,8 @@ const TEAMS = [
   "Curaçao", "Haiti", "Panama", "New Zealand"
 ];
 
+const WORLD_CUP_KICKOFF = new Date("2026-06-11T20:00:00Z");
+
 const styles = {
   app: { minHeight: "100vh", background: "#0a0e1a", color: "#e8eaf0", fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif" },
   nav: { background: "rgba(10,14,26,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
@@ -119,6 +121,26 @@ function App() {
   const [bulkGroup, setBulkGroup] = useState("");
   const [addError, setAddError] = useState("");
 
+  const [kickoffCountdown, setKickoffCountdown] = useState("");
+
+  // Global Countdown Handler for the World Cup Start Date
+  useEffect(() => {
+    function updateTimer() {
+      const ms = WORLD_CUP_KICKOFF - new Date();
+      if (ms <= 0) {
+        setKickoffCountdown("Tournament Started");
+        return;
+      }
+      const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      setKickoffCountdown(`${days}d ${hours}h ${minutes}m`);
+    }
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function fetchCloudData() {
     try {
       const { data: dbMatches } = await supabaseClient.from('matches').select('*');
@@ -135,7 +157,9 @@ function App() {
               username: u.username,
               password: u.password,
               isAdmin: u.is_admin || false,
-              championPick: u.champion_pick || null,
+              favoriteTeam: u.favorite_team || null,
+              tournamentWinnerPick: u.tournament_winner_pick || null,
+              isPickLocked: u.is_pick_locked || false,
               picks: typeof u.picks === 'object' && u.picks !== null ? u.picks : {}
             };
           }
@@ -195,7 +219,7 @@ function App() {
             pts += parseFloat(odds) || 0;
           }
         });
-        if (tournamentConfig.tournament_winner && u.championPick === tournamentConfig.tournament_winner) {
+        if (tournamentConfig.tournament_winner && u.tournamentWinnerPick === tournamentConfig.tournament_winner) {
           pts += parseFloat(tournamentConfig.champion_odds[tournamentConfig.tournament_winner]) || 0;
         }
         return { ...u, computedPoints: Math.round(pts * 100) / 100 };
@@ -220,12 +244,10 @@ function App() {
     
     const uname = form.username.trim().toLowerCase();
     if (users[uname]) { setError("Username taken."); return; }
-    if (!form.championPick && uname !== "dobrinescu") { setError("Please pick your champion."); return; }
+    if (!form.favoriteTeam && uname !== "dobrinescu") { setError("Please pick your favorite team."); return; }
 
     setError("");
     const isFirstAdmin = uname === "dobrinescu" && form.password === "admin123";
-    
-    // Fix: Use a globally valid email format (.com) to pass standard Supabase internal regex validation
     const validEmail = `${uname}@pariuriwc2026.com`;
 
     const { data: authData, error: regError } = await supabaseClient
@@ -241,16 +263,17 @@ function App() {
       return;
     }
 
-    // Explicitly write transactional custom parameters to your custom database profiles table
     if (authData && authData.user) {
       const { error: profileError } = await supabaseClient
         .from('profiles')
         .insert([{
           id: authData.user.id,
           username: form.username.trim(),
-          password: form.password, // Fallback string tracking matched to application loop
+          password: form.password,
           is_admin: isFirstAdmin,
-          champion_pick: form.championPick || null,
+          favorite_team: form.favoriteTeam || null,
+          tournament_winner_pick: null,
+          is_pick_locked: false,
           picks: {}
         }]);
 
@@ -271,6 +294,45 @@ function App() {
   function handleLogout() {
     setSession(null);
     setPage("home");
+  }
+
+  // Handle auto-saving the champion pick inside the panel
+  async function handleAutosaveWinner(teamSelected) {
+    if (currentUser?.isPickLocked || new Date() >= WORLD_CUP_KICKOFF) return;
+
+    const { error: err } = await supabaseClient
+      .from('profiles')
+      .update({ tournament_winner_pick: teamSelected || null })
+      .eq('username', currentUser.username);
+
+    if (err) {
+      showToast("❌ Autosave failed connection issue.");
+      console.error(err);
+    } else {
+      showToast(`Autosaved Champion: ${teamSelected || "Cleared"}`);
+      fetchCloudData();
+    }
+  }
+
+  // Trigger manual lock mechanism
+  async function handleLockPick() {
+    if (!currentUser?.tournamentWinnerPick) {
+      showToast("⚠️ Pick a team before locking your choice.");
+      return;
+    }
+    if (!window.confirm("Are you sure? This will freeze your predictive choice and you cannot adjust it again.")) return;
+
+    const { error: err } = await supabaseClient
+      .from('profiles')
+      .update({ is_pick_locked: true })
+      .eq('username', currentUser.username);
+
+    if (err) {
+      showToast("❌ Failed to lock choice.");
+    } else {
+      showToast("Locked! 🔒 Choice finalized.");
+      fetchCloudData();
+    }
   }
 
   const kickoffDate = (m) => new Date(m.match_date + "T" + (m.match_time || "00:00"));
@@ -380,9 +442,6 @@ function App() {
   }
 
   const pickableMatches = matches.filter(m => !isLocked(m)).sort((a, b) => kickoffDate(a) - kickoffDate(b));
-  const nextMatchday = pickableMatches.slice(0, 10);
-  const matchesAwaitingResult = matches.filter(m => !m.result && kickoffDate(m) <= new Date()).sort((a, b) => kickoffDate(a) - kickoffDate(b));
-  const pastMatches = matches.filter(m => m.result).sort((a,b) => kickoffDate(b) - kickoffDate(a));
   const leaderboard = computeLeaderboard();
 
   return (
@@ -467,9 +526,9 @@ function App() {
                 <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} /></div>
                 <div><label style={styles.label}>Confirm password</label><input style={styles.input} type="password" value={form.password2||""} onChange={e=>setForm(p=>({...p,password2:e.target.value}))} /></div>
                 <div>
-                  <label style={styles.label}>🏆 Champion prediction</label>
-                  <select style={styles.input} value={form.championPick||""} onChange={e=>setForm(p=>({...p,championPick:e.target.value}))}>
-                    <option value="">Pick team...</option>
+                  <label style={styles.label}>❤️ Pick your favourite team (NO Bonus Points)</label>
+                  <select style={styles.input} value={form.favoriteTeam||""} onChange={e=>setForm(p=>({...p,favoriteTeam:e.target.value}))}>
+                    <option value="">Choose your fan team...</option>
                     {TEAMS.map(t=><option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
                   </select>
                 </div>
@@ -483,7 +542,53 @@ function App() {
 
       {session && !isAdmin && page === "leaderboard" && (
         <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ marginBottom: 28 }}>
+          
+          {/* TOURNAMENT CHAMPION MANAGEMENT PANEL FOR PLAYERS */}
+          <div style={{ ...styles.card, border: "1px solid rgba(245,200,66,0.35)", background: "rgba(245,200,66,0.02)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, color: "#f5c842", fontSize: 18, fontWeight: 800 }}>🏆 Predict the Tournament Winner</h3>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "rgba(232,234,240,0.5)" }}>Correct answers grant bonus points computed from active team betting odds.</p>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span style={styles.badge("gold")}>⏱️ {kickoffCountdown}</span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginTop: 14, alignItems: "center" }}>
+              <div style={{ flex: 1 }}>
+                <select 
+                  style={styles.input} 
+                  value={currentUser?.tournamentWinnerPick || ""} 
+                  disabled={currentUser?.isPickLocked || kickoffCountdown === "Tournament Started"}
+                  onChange={(e) => handleAutosaveWinner(e.target.value)}
+                >
+                  <option value="">Choose winning champion...</option>
+                  {TEAMS.map(t => {
+                    const odds = tournamentConfig.champion_odds[t] || "10.00";
+                    return <option key={t} value={t}>{flagEmoji(t)} {t} (Odds: {odds})</option>;
+                  })}
+                </select>
+              </div>
+
+              {!currentUser?.isPickLocked && kickoffCountdown !== "Tournament Started" && (
+                <button 
+                  style={{ ...styles.btn("primary"), padding: "10px 16px", whiteSpace: "nowrap", fontWeight: 700 }}
+                  onClick={handleLockPick}
+                >
+                  Lock Pick 🔒
+                </button>
+              )}
+            </div>
+
+            {currentUser?.isPickLocked && (
+              <div style={{ marginTop: 12, background: "rgba(76,175,80,0.1)", border: "1px solid rgba(76,175,80,0.3)", padding: "8px 12px", borderRadius: 8, fontSize: 13, color: "#4caf50", fontWeight: 600 }}>
+                🔒 Your prediction is locked: {currentUser?.tournamentWinnerPick ? `${flagEmoji(currentUser.tournamentWinnerPick)} ${currentUser.tournamentWinnerPick}` : ""}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 28, marginTop: 24 }}>
             <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Leaderboard</h2>
             <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} · {leaderboard.length} players</p>
           </div>
@@ -510,7 +615,8 @@ function App() {
                 </div>
               </div>
               <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-                <span style={styles.badge("gold")}>🏆 {currentUser.championPick || "No choice"}</span>
+                <span style={styles.badge("default")}>❤️ Fan of: {currentUser.favoriteTeam ? `${flagEmoji(currentUser.favoriteTeam)} ${currentUser.favoriteTeam}` : "None"}</span>
+                <span style={styles.badge("gold")}>🏆 Prediction: {currentUser.tournamentWinnerPick ? `${flagEmoji(currentUser.tournamentWinnerPick)} ${currentUser.tournamentWinnerPick}` : "Not selected"} {currentUser.isPickLocked && "🔒"}</span>
               </div>
             </div>
           )}
@@ -521,7 +627,10 @@ function App() {
                 <div style={{ fontSize: 26, marginBottom: 4 }}>{styles.podium[i]?.rank}</div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: styles.podium[i]?.color, marginBottom: 2 }}>{u.username}</div>
                 <div style={{ fontSize: 20, fontWeight: 800 }}>{u.computedPoints.toFixed(2)}</div>
-                {u.championPick && <div style={{ fontSize: 11, marginTop: 6, color: "rgba(232,234,240,0.45)" }}>{flagEmoji(u.championPick)} {u.championPick}</div>}
+                <div style={{ fontSize: 11, marginTop: 6, color: "rgba(232,234,240,0.45)", display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span>❤️ {u.favoriteTeam ? flagEmoji(u.favoriteTeam) : "🏳️"}</span>
+                  <span>🏆 {u.tournamentWinnerPick ? flagEmoji(u.tournamentWinnerPick) : "🏳️"} {u.isPickLocked && "🔒"}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -531,7 +640,10 @@ function App() {
               <div style={{ width: 28, textAlign: "center", fontWeight: 700, color: "rgba(232,234,240,0.3)" }}>#{i+4}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</div>
-                <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>{flagEmoji(u.championPick)} {u.championPick}</div>
+                <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)", display: "flex", gap: 10 }}>
+                  <span>Fan: {u.favoriteTeam ? `${flagEmoji(u.favoriteTeam)} ${u.favoriteTeam}` : "🏳️"}</span>
+                  <span>Champ: {u.tournamentWinnerPick ? `${flagEmoji(u.tournamentWinnerPick)} ${u.tournamentWinnerPick}` : "🏳️"} {u.isPickLocked && "🔒"}</span>
+                </div>
               </div>
               <div style={{ fontWeight: 800, fontSize: 18 }}>{u.computedPoints.toFixed(2)}</div>
             </div>
@@ -708,7 +820,12 @@ function App() {
                 const u = users[k];
                 return (
                   <div key={k} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div><strong>{u.username}</strong> {u.isAdmin && "(Admin)"} — Choice: {u.championPick}</div>
+                    <div>
+                      <strong>{u.username}</strong> {u.isAdmin && "(Admin)"}
+                      <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>
+                        Fan: {u.favoriteTeam} | Prediction: {u.tournamentWinnerPick} {u.isPickLocked && "🔒"}
+                      </div>
+                    </div>
                     {!u.isAdmin && <button style={styles.btn("danger")} onClick={() => adminDeleteUser(k)}>Delete Account</button>}
                   </div>
                 );
