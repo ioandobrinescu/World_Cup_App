@@ -10,41 +10,83 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  html, body, #root { margin: 0; padding: 0; min-height: 100vh; background: #0a0e1a; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  :root {
+    --bg-dark: #0a0e1a;
+    --card-bg: #13192e;
+    --accent-gold: #f5c842;
+    --text-primary: #e8eaf0;
+    --text-secondary: rgba(232,234,240,0.5);
+    --green-win: #4caf50;
+    --red-loss: #e24b4b;
+    --blue-draw: #2196f3;
+  }
+  html, body, #root { margin: 0; padding: 0; min-height: 100vh; background: var(--bg-dark); color: var(--text-primary); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 76px; }
   * { box-sizing: border-box; }
   input, select, button { font-family: inherit; }
-  
+
   #loader {
-    position: fixed; inset: 0; background: #0a0e1a; color: #f5c842;
+    position: fixed; inset: 0; background: var(--bg-dark); color: var(--accent-gold);
     display: flex; align-items: center; justify-content: center; flex-direction: column;
-    gap: 14px; font-weight: 700; font-size: 15px; z-index: 9999;
+    gap: 14px; font-weight: 700; font-size: 16px; z-index: 9999;
     transition: opacity 0.3s ease;
   }
   #loader.hidden { opacity: 0; pointer-events: none; }
   .spinner {
-    width: 36px; height: 36px; border: 3px solid rgba(245,200,66,0.2);
-    border-top-color: #f5c842; border-radius: 50%;
-    animation: spin 0.7s linear infinite;
+    width: 42px; height: 42px; border: 4px solid rgba(245,200,66,0.15);
+    border-top-color: var(--accent-gold); border-radius: 50%;
+    animation: spin 0.75s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Mobile Bottom Navigation Bar Styles */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
+    background: rgba(13, 20, 38, 0.96); backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.08); display: flex;
+    justify-content: space-around; align-items: center; z-index: 900;
+  }
+  .bottom-nav-btn {
+    background: transparent; border: none; color: var(--text-secondary);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; cursor: pointer; flex: 1; height: 100%; justify-content: center;
+    transition: color 0.2s;
+  }
+  .bottom-nav-btn.active { color: var(--accent-gold); font-weight: 700; }
+  .bottom-nav-icon { font-size: 20px; }
+
+  /* Visual Utilities */
+  .container { maxWidth: 680px; margin: 0 auto; padding: 20px 16px; }
+  .card-styled { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.06); borderRadius: 16px; padding: 18px 20px; marginBottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+  .input-styled { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); borderRadius: 10px; color: #fff; padding: 11px 14px; fontSize: 14px; width: 100%; outline: none; }
+  .btn-styled { border: none; borderRadius: 10px; padding: 11px 22px; fontWeight: 700; fontSize: 14px; cursor: pointer; transition: transform 0.1s; }
+  .btn-styled:active { transform: scale(0.98); }
+
+  /* Community Percentage Bars */
+  .pct-bar-wrapper { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 10px; background: rgba(255,255,255,0.05); }
+  .pct-segment { height: 100%; transition: width 0.3s ease; }
 </style>
 </head>
 <body>
 
 <div id="loader">
   <div class="spinner"></div>
-  <div>⚽ Loading Pariuri World Cup 2026...</div>
+  <div style="letter-spacing: 0.5px;">⚽ ESTABLISHING ARENA SERVER...</div>
 </div>
 
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect } = React;
+const { useState, useEffect, useMemo } = React;
 
 const SUPABASE_URL = "https://mfvwumillzpofmvjibkp.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_QUjFKlHhgcIgisSV-SESdg_49GIA0c0";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// API FOOTBALL GLOBAL SETTINGS
+const API_FOOTBALL_KEY = "YOUR_API_FOOTBALL_KEY_HERE"; // Fill keys to wire automation pipeline
+const API_LEAGUE_ID = 1; // FIFA World Cup
+const API_SEASON = 2026;
 
 const TEAMS = [
   "United States", "Canada", "Mexico", "Argentina", "Brazil", "Colombia", "Ecuador", "Paraguay", "Uruguay",
@@ -53,872 +95,866 @@ const TEAMS = [
   "Algeria", "Cabo Verde", "Côte d'Ivoire", "Egypt", "Ghana", "Morocco", "Senegal", "South Africa", "Tunisia", "DR Congo",
   "Australia", "Iran", "Japan", "Jordan", "South Korea", "Qatar", "Saudi Arabia", "Uzbekistan", "Iraq",
   "Curaçao", "Haiti", "Panama", "New Zealand"
-];
+].sort();
 
 const WORLD_CUP_KICKOFF = new Date("2026-06-11T20:00:00Z");
 
 const styles = {
-  app: { minHeight: "100vh", background: "#0a0e1a", color: "#e8eaf0", fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif" },
-  nav: { background: "rgba(10,14,26,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
-  logo: { fontWeight: 800, fontSize: 20, color: "#f5c842", letterSpacing: "-0.5px", marginRight: "auto", cursor: "pointer" },
-  navBtn: (active) => ({ background: active ? "rgba(245,200,66,0.12)" : "transparent", border: "none", color: active ? "#f5c842" : "rgba(232,234,240,0.6)", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400 }),
-  hero: { padding: "80px 24px 60px", maxWidth: 820, margin: "0 auto", textAlign: "center" },
-  heroTitle: { fontSize: 52, fontWeight: 800, color: "#f5c842", margin: "0 0 12px", lineHeight: 1.1, letterSpacing: "-2px" },
-  heroSub: { fontSize: 18, color: "rgba(232,234,240,0.6)", margin: "0 0 48px" },
-  card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px 24px", marginBottom: 16 },
-  clickableCard: { cursor: "pointer", transition: "transform 0.2s, background 0.2s" },
-  btn: (variant="primary") => ({ background: variant === "primary" ? "#f5c842" : variant === "danger" ? "#e24b4b" : "rgba(255,255,255,0.07)", color: variant === "primary" ? "#0a0e1a" : "#e8eaf0", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer" }),
+  nav: { background: "rgba(10,14,26,0.92)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
+  logo: { fontWeight: 900, fontSize: 18, color: "var(--accent-gold)", letterSpacing: "-0.5px" },
+  badge: (v) => ({ background: v === "gold" ? "rgba(245,200,66,0.15)" : v === "green" ? "rgba(76,175,80,0.15)" : v === "danger" ? "rgba(226,75,75,0.15)" : "rgba(255,255,255,0.08)", color: v === "gold" ? "var(--accent-gold)" : v === "green" ? "var(--green-win)" : v === "danger" ? "var(--red-loss)" : "var(--text-secondary)", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 700 }),
   pickBtn: (selected, type) => {
-    const colors = { "1": "#4caf50", "X": "#f5c842", "2": "#2196f3" };
-    return { background: selected ? colors[type] : "rgba(255,255,255,0.06)", color: selected ? "#0a0e1a" : "#e8eaf0", border: `1.5px solid ${selected ? colors[type] : "rgba(255,255,255,0.12)"}`, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13, minWidth: 52 };
+    const colorMap = { "1": "var(--green-win)", "X": "var(--accent-gold)", "2": "var(--blue-draw)" };
+    return { background: selected ? colorMap[type] : "rgba(255,255,255,0.05)", color: selected ? "#0a0e1a" : "#fff", border: `1.5px solid ${selected ? colorMap[type] : "rgba(255,255,255,0.1)"}`, borderRadius: 10, padding: "10px", flex: 1, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 };
   },
-  input: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, color: "#e8eaf0", padding: "10px 14px", fontSize: 14, width: "100%", outline: "none" },
-  label: { fontSize: 12, color: "rgba(232,234,240,0.5)", marginBottom: 5, display: "block" },
-  badge: (color) => ({ background: color === "gold" ? "rgba(245,200,66,0.15)" : color === "green" ? "rgba(76,175,80,0.15)" : "rgba(255,255,255,0.08)", color: color === "gold" ? "#f5c842" : color === "green" ? "#4caf50" : "rgba(232,234,240,0.5)", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 600 }),
-  podium: [
-    { bg: "rgba(255,215,0,0.12)", border: "rgba(255,215,0,0.3)", color: "#ffd700", rank: "🥇" },
-    { bg: "rgba(192,192,192,0.1)", border: "rgba(192,192,192,0.25)", color: "#c0c0c0", rank: "🥈" },
-    { bg: "rgba(205,127,50,0.1)", border: "rgba(205,127,50,0.25)", color: "#cd7f32", rank: "🥉" },
-  ],
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyCenter: "center", zIndex: 1000, padding: 20, backdropFilter: "blur(4px)" },
-  modalContent: { background: "#0f1626", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, maxWidth: 540, width: "100%", padding: 24, maxHeight: "85vh", overflowY: "auto", position: "relative", margin: "auto" }
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20, backdropFilter: "blur(6px)" },
+  modalContent: { background: "#0e1324", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, maxWidth: 500, width: "100%", padding: 24, maxHeight: "80vh", overflowY: "auto" }
 };
 
 const flagEmoji = (team) => {
   const flags = {
     "United States":"🇺🇸","Canada":"🇨🇦","Mexico":"🇲🇽","Argentina":"🇦🇷","Brazil":"🇧🇷","Colombia":"🇨🇴","Ecuador":"🇪🇨","Paraguay":"🇵🇾","Uruguay":"🇺🇾",
-    "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","France":"🇫🇷","Croatia":"🇭🇷","Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
-    "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷","Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿",
+    "England":"🏴Structured🏴","France":"🇫🇷","Croatia":"🇭🇷","Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
+    "Scotland":"🏴🏴","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷","Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿",
     "Algeria":"🇩🇿","Cabo Verde":"🇨🇻","Côte d'Ivoire":"🇨🇮","Egypt":"🇪🇬","Ghana":"🇬🇭","Morocco":"🇲🇦","Senegal":"🇸🇳","South Africa":"🇿🇦","Tunisia":"🇹🇳","DR Congo":"🇨🇩",
     "Australia":"🇦🇺","Iran":"🇮🇷","Japan":"🇯🇵","Jordan":"🇯🇴","South Korea":"🇰🇷","Qatar":"🇶🇦","Saudi Arabia":"🇸🇦","Uzbekistan":"🇺🇿","Iraq":"🇮🇶",
     "Curaçao":"🇨🇼","Haiti":"🇭🇹","Panama":"🇵🇦","New Zealand":"🇳🇿"
   };
-  return flags[team] || "🏳️";
+  return flags[team] || "🏴‍☠️";
 };
 
 function App() {
-  const [session, setSession] = useState(() => {
-    const saved = localStorage.getItem("pariuri_session");
-    return saved ? JSON.parse(saved) : null;
-  });
-
+  const [session, setSession] = useState(() => JSON.parse(localStorage.getItem("pariuri_session")));
   const [users, setUsers] = useState({});
   const [matches, setMatches] = useState([]);
   const [tournamentConfig, setTournamentConfig] = useState({ tournament_name: "World Cup 2026", tournament_winner: null, champion_odds: {} });
 
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState("home"); // home, gateway, profile, leaderboard, matchday, admin
   const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({});
   const [error, setError] = useState("");
-  const [adminTab, setAdminTab] = useState("matches");
   const [toast, setToast] = useState("");
+  const [adminTab, setAdminTab] = useState("matches");
+  const [inspectUser, setInspectUser] = useState(null);
+  const [inspectMatchBets, setInspectMatchBets] = useState(null);
 
-  const [scheduleFilter, setScheduleFilter] = useState("ALL");
-  const [bulkTeam1, setBulkTeam1] = useState("");
-  const [bulkTeam2, setBulkTeam2] = useState("");
-  const [bulkDate, setBulkDate] = useState("");
-  const [bulkTime, setBulkTime] = useState("20:00");
-  const [bulkOdds1, setBulkOdds1] = useState("");
-  const [bulkOddsX, setBulkOddsX] = useState("");
-  const [bulkOdds2, setBulkOdds2] = useState("");
-  const [bulkGroup, setBulkGroup] = useState("");
-  const [addError, setAddError] = useState("");
+  // Countdown States
+  const [globalTimer, setGlobalTimer] = useState("");
+  const [isTournamentBegun, setIsTournamentBegun] = useState(false);
 
-  const [kickoffCountdown, setKickoffCountdown] = useState("");
-  const [selectedInspectUser, setSelectedInspectUser] = useState(null);
+  // Admin match setup state
+  const [matchForm, setMatchForm] = useState({ team1: "", team2: "", date: "", time: "21:00", odds1: "", oddsX: "", odds2: "", stage: "", apiFixtureId: "" });
 
-  // Global Countdown Handler for the World Cup Start Date
-  useEffect(() => {
-    function updateTimer() {
-      const ms = WORLD_CUP_KICKOFF - new Date();
-      if (ms <= 0) {
-        setKickoffCountdown("Tournament Started");
-        return;
-      }
-      const days = Math.floor(ms / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-      setKickoffCountdown(`${days}d ${hours}h ${minutes}m`);
-    }
-    updateTimer();
-    const interval = setInterval(updateTimer, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  async function fetchCloudData() {
+  async function fetchAllData() {
     try {
-      const { data: dbMatches } = await supabaseClient.from('matches').select('*');
-      if (dbMatches) setMatches(dbMatches);
+      const { data: m } = await supabaseClient.from('matches').select('*');
+      if (m) setMatches(m);
 
-      const { data: dbProfiles } = await supabaseClient.from('profiles').select('*');
-      if (dbProfiles) {
-        const mappedUsers = {};
-        dbProfiles.forEach(u => {
-          const usernameKey = u.username ? u.username.toLowerCase().trim() : "";
-          if (usernameKey) {
-            mappedUsers[usernameKey] = {
+      const { data: p } = await supabaseClient.from('profiles').select('*');
+      if (p) {
+        const mapped = {};
+        p.forEach(u => {
+          if (u.username) {
+            mapped[u.username.toLowerCase().trim()] = {
               id: u.id,
               username: u.username,
               password: u.password,
               isAdmin: u.is_admin || false,
-              favoriteTeam: u.favorite_team || null,
-              tournamentWinnerPick: u.tournament_winner_pick || null,
+              favoriteTeam: u.favorite_team,
+              tournamentWinnerPick: u.tournament_winner_pick,
               isPickLocked: u.is_pick_locked || false,
-              picks: typeof u.picks === 'object' && u.picks !== null ? u.picks : {}
+              picks: u.picks && typeof u.picks === 'object' ? u.picks : {},
+              previousRank: u.previous_rank || 0
             };
           }
         });
-        setUsers(mappedUsers);
+        setUsers(mapped);
       }
 
-      const { data: dbConfig } = await supabaseClient.from('tournament_config').select('*').eq('id', 1).maybeSingle();
-      if (dbConfig) {
+      const { data: cfg } = await supabaseClient.from('tournament_config').select('*').eq('id', 1).maybeSingle();
+      if (cfg) {
         setTournamentConfig({
-          tournament_name: dbConfig.tournament_name || "World Cup 2026",
-          tournament_winner: dbConfig.tournament_winner || null,
-          champion_odds: dbConfig.champion_odds || {}
+          tournament_name: cfg.tournament_name || "World Cup 2026",
+          tournament_winner: cfg.tournament_winner || null,
+          champion_odds: cfg.champion_odds || {}
         });
       }
-    } catch (err) {
-      console.error("Data fetch error:", err);
-    }
+    } catch (ex) { console.error("Database connection failure:", ex); }
   }
 
   useEffect(() => {
-    fetchCloudData().then(() => {
-      const loader = document.getElementById("loader");
-      if (loader) loader.classList.add("hidden");
+    fetchAllData().then(() => {
+      document.getElementById("loader").classList.add("hidden");
     });
+    const interval = setInterval(fetchAllData, 20000);
+    return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const id = setInterval(fetchCloudData, 15000);
-    return () => clearInterval(id);
-  }, []);
-
+  // Sync session and enforce onboarding gateway logic
   useEffect(() => {
     if (session) {
       localStorage.setItem("pariuri_session", JSON.stringify(session));
+      const targetUser = users[session.username.toLowerCase()];
+      if (targetUser?.isAdmin) {
+        setPage("admin");
+      } else if (page === "home" || page === "auth") {
+        const timeRemaining = WORLD_CUP_KICKOFF - new Date();
+        if (timeRemaining > 0) {
+          setPage("gateway");
+        } else {
+          setPage("profile");
+        }
+      }
     } else {
       localStorage.removeItem("pariuri_session");
     }
-  }, [session]);
+  }, [session, users]);
 
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2800);
-  }
+  // Main countdown routine
+  useEffect(() => {
+    function computeTimer() {
+      const remaining = WORLD_CUP_KICKOFF - new Date();
+      if (remaining <= 0) {
+        setIsTournamentBegun(true);
+        setGlobalTimer("TOURNAMENT LIVE");
+      } else {
+        const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+        setGlobalTimer(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      }
+    }
+    computeTimer();
+    const subId = setInterval(computeTimer, 1000);
+    return () => clearInterval(subId);
+  }, []);
 
-  const currentUser = session ? users[session.username] : null;
-  const isAdmin = currentUser?.isAdmin;
+  function triggerToast(m) { setToast(m); setTimeout(() => setToast(""), 2500); }
 
-  function computeLeaderboard() {
-    return Object.values(users)
+  const currentUser = session ? users[session.username.toLowerCase()] : null;
+
+  // Live Aggregate Leaderboard computation (Dynamic Sorting & Tie-Breaking)
+  const sortedLeaderboard = useMemo(() => {
+    const list = Object.values(users)
       .filter(u => !u.isAdmin)
       .map(u => {
         let pts = 0;
+        let correctWins = 0;
         matches.forEach(m => {
           if (m.result && u.picks && u.picks[m.id] === m.result) {
-            const odds = m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2;
-            pts += parseFloat(odds) || 0;
+            correctWins++;
+            const field = m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2;
+            pts += parseFloat(field) || 0;
           }
         });
         if (tournamentConfig.tournament_winner && u.tournamentWinnerPick === tournamentConfig.tournament_winner) {
           pts += parseFloat(tournamentConfig.champion_odds[tournamentConfig.tournament_winner]) || 0;
         }
-        return { ...u, computedPoints: Math.round(pts * 100) / 100 };
-      })
-      .sort((a, b) => b.computedPoints - a.computedPoints);
-  }
-
-  function handleLogin() {
-    if (!form.username || !form.password) { setError("Fields required."); return; }
-    const uname = form.username.trim().toLowerCase();
-    const user = users[uname];
-    if (!user || user.password !== form.password) { setError("Invalid credentials."); return; }
-    setError("");
-    setSession({ username: uname });
-    setForm({});
-    setPage(user.isAdmin ? "admin" : "leaderboard");
-  }
-
-  async function handleRegister() {
-    if (!form.username || !form.password || !form.password2) { setError("All fields required."); return; }
-    if (form.password !== form.password2) { setError("Passwords don't match."); return; }
-    
-    const uname = form.username.trim().toLowerCase();
-    if (users[uname]) { setError("Username taken."); return; }
-    if (!form.favoriteTeam && uname !== "dobrinescu") { setError("Please pick your favorite team."); return; }
-
-    setError("");
-    const isFirstAdmin = uname === "dobrinescu" && form.password === "admin123";
-    const validEmail = `${uname}@pariuriwc2026.com`;
-
-    const { data: authData, error: regError } = await supabaseClient
-      .auth
-      .signUp({
-        email: validEmail,
-        password: form.password
+        return { ...u, totalPoints: Math.round(pts * 100) / 100, correctWins };
       });
 
-    if (regError) {
-      console.error("Supabase Registration Error:", regError);
-      setError(`Registration sync failure: ${regError.message}`);
-      return;
-    }
+    // Dynamic Rank sorting first by points, then total wins
+    return list.sort((a, b) => b.totalPoints - a.totalPoints || b.correctWins - a.correctWins);
+  }, [users, matches, tournamentConfig]);
 
-    if (authData && authData.user) {
-      const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .insert([{
-          id: authData.user.id,
-          username: form.username.trim(),
-          password: form.password,
-          is_admin: isFirstAdmin,
-          favorite_team: form.favoriteTeam || null,
-          tournament_winner_pick: null,
-          is_pick_locked: false,
-          picks: {}
-        }]);
+  // Calculate Matchday MVP across most recently finalized matchday context
+  const matchdayMvpNode = useMemo(() => {
+    const historicalMatchdays = [...new Set(matches.filter(m => m.result).map(m => parseInt(m.matchday) || 1))];
+    if (!historicalMatchdays.length) return null;
+    const latestMD = Math.max(...historicalMatchdays);
 
-      if (profileError) {
-        console.error("Profile Sync Error:", profileError);
-        setError(`Database constraint failure: ${profileError.message}`);
-        return;
-      }
-    }
+    const scores = Object.values(users).filter(u => !u.isAdmin).map(u => {
+      let mdWins = 0;
+      let mdPts = 0;
+      matches.filter(m => parseInt(m.matchday) === latestMD && m.result).forEach(m => {
+        if (u.picks?.[m.id] === m.result) {
+          mdWins++;
+          const field = m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2;
+          mdPts += parseFloat(field) || 0;
+        }
+      });
+      return { username: u.username, mdWins, mdPts };
+    }).sort((a, b) => b.mdWins - a.mdWins || b.mdPts - a.mdPts);
 
-    await fetchCloudData();
-    setSession({ username: uname });
-    setForm({});
-    setPage(isFirstAdmin ? "admin" : "leaderboard");
-    showToast(`Welcome ${form.username.trim()}!`);
+    return (scores[0] && scores[0].mdWins > 0) ? { matchday: latestMD, username: scores[0].username, wins: scores[0].mdWins } : null;
+  }, [users, matches]);
+
+  // Auth Operations
+  function runLogin() {
+    if (!form.username || !form.password) { setError("Fill all fields"); return; }
+    const target = users[form.username.trim().toLowerCase()];
+    if (!target || target.password !== form.password) { setError("Invalid parameters provided"); return; }
+    setError("");
+    setSession({ username: target.username });
   }
 
-  function handleLogout() {
-    setSession(null);
-    setPage("home");
+  async function runRegister() {
+    if (!form.username || !form.password || !form.favoriteTeam) { setError("Provide username, password and fan choice"); return; }
+    const normalized = form.username.trim().toLowerCase();
+    if (users[normalized]) { setError("Username exists"); return; }
+
+    const isSystemAdmin = normalized === "dobrinescu" && form.password === "admin123";
+    const generatedEmail = `${normalized}@pariuriwc2026.com`;
+
+    const { data: authWrap, error: authErr } = await supabaseClient.auth.signUp({ email: generatedEmail, password: form.password });
+    if (authErr) { setError(authErr.message); return; }
+
+    if (authWrap.user) {
+      const { error: profErr } = await supabaseClient.from('profiles').insert([{
+        id: authWrap.user.id,
+        username: form.username.trim(),
+        password: form.password,
+        is_admin: isSystemAdmin,
+        favorite_team: form.favoriteTeam,
+        tournament_winner_pick: null,
+        is_pick_locked: false,
+        picks: {},
+        previous_rank: 0
+      }]);
+      if (profErr) { setError(profErr.message); return; }
+    }
+
+    await fetchAllData();
+    setSession({ username: form.username.trim() });
   }
 
-  async function handleAutosaveWinner(teamSelected) {
-    if (currentUser?.isPickLocked || new Date() >= WORLD_CUP_KICKOFF) return;
-
-    const { error: err } = await supabaseClient
-      .from('profiles')
-      .update({ tournament_winner_pick: teamSelected || null })
-      .eq('username', currentUser.username);
-
-    if (err) {
-      showToast("❌ Autosave failed connection issue.");
-      console.error(err);
-    } else {
-      showToast(`Autosaved Champion: ${teamSelected || "Cleared"}`);
-      fetchCloudData();
-    }
-  }
-
-  async function handleLockPick() {
-    if (!currentUser?.tournamentWinnerPick) {
-      showToast("⚠️ Pick a team before locking your choice.");
-      return;
-    }
-    if (!window.confirm("Are you sure? This will freeze your predictive choice and you cannot adjust it again.")) return;
-
-    const { error: err } = await supabaseClient
-      .from('profiles')
-      .update({ is_pick_locked: true })
-      .eq('username', currentUser.username);
-
-    if (err) {
-      showToast("❌ Failed to lock choice.");
-    } else {
-      showToast("Locked! 🔒 Choice finalized.");
-      fetchCloudData();
-    }
-  }
-
-  const kickoffDate = (m) => new Date(m.match_date + "T" + (m.match_time || "00:00"));
-  const isLocked = (m) => !!m.result || kickoffDate(m) <= new Date();
-
-  const countdown = (m) => {
-    const ms = kickoffDate(m) - new Date();
-    if (ms <= 0) return null;
-    const mins = Math.floor(ms / 60000);
-    const days = Math.floor(mins / 1440);
-    const hours = Math.floor((mins % 1440) / 60);
-    const remMins = mins % 60;
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${remMins}m`;
-    if (mins > 0) return `${mins}m`;
-    return "<1m";
-  };
-
-  async function makePick(matchId, pick) {
+  // Pick management with atomic remote saving
+  async function submitPrediction(matchId, outcome) {
     const m = matches.find(x => x.id === matchId);
-    if (!m) return;
-    if (isLocked(m)) { showToast("⛔ Picks locked — match started."); return; }
-
-    const updatedPicks = { ...(currentUser.picks || {}), [matchId]: pick };
-
-    const { error: syncErr } = await supabaseClient
-      .from('profiles')
-      .update({ picks: updatedPicks })
-      .eq('username', currentUser.username);
-
-    if (syncErr) {
-      showToast("❌ Connection error. Pick failed to log.");
+    if (!m || m.result || new Date(m.match_date + "T" + m.match_time) <= new Date()) {
+      triggerToast("🔒 Selections closed for this match.");
       return;
     }
+    const currentPicks = currentUser.picks || {};
+    const localUpdated = { ...currentPicks, [matchId]: outcome };
 
-    setUsers(prev => {
-      const u = { ...prev[session.username] };
-      u.picks = updatedPicks;
-      return { ...prev, [session.username]: u };
-    });
-    showToast(`Pick saved: ${pick === "1" ? m.team1 : pick === "2" ? m.team2 : "Draw"}`);
+    const { error: updateErr } = await supabaseClient.from('profiles').update({ picks: localUpdated }).eq('username', currentUser.username);
+    if (updateErr) { triggerToast("❌ Cloud synchronization failed."); return; }
+
+    setUsers(prev => ({
+      ...prev,
+      [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated }
+    }));
+    triggerToast("Prediction saved! ⚽");
   }
 
-  async function adminAddMatch() {
-    if (!bulkTeam1 || !bulkTeam2 || !bulkDate || !bulkOdds1 || !bulkOddsX || !bulkOdds2) {
-      setAddError("Fill all fields."); return;
-    }
-    const id = `m_${Date.now()}`;
-    const newMatch = {
-      id, team1: bulkTeam1, team2: bulkTeam2,
-      match_date: bulkDate, match_time: bulkTime || "20:00",
-      odds1: parseFloat(bulkOdds1), oddsx: parseFloat(bulkOddsX), odds2: parseFloat(bulkOdds2),
-      tournament_stage: bulkGroup || "", result: null
+  async function updateChampionPrediction(team) {
+    if (currentUser.isPickLocked || isTournamentBegun) return;
+    await supabaseClient.from('profiles').update({ tournament_winner_pick: team || null }).eq('username', currentUser.username);
+    fetchAllData();
+    triggerToast("Champion selection modified");
+  }
+
+  async function lockChampionChoice() {
+    if (!currentUser.tournamentWinnerPick) { triggerToast("Select a team first"); return; }
+    if (!window.confirm("Lock selection permanently?")) return;
+    await supabaseClient.from('profiles').update({ is_pick_locked: true }).eq('username', currentUser.username);
+    fetchAllData();
+    triggerToast("Champion selection frozen! 🔒");
+  }
+
+  // Live Community Breakdown metrics
+  function computeGlobalBetDistribution(matchId) {
+    const pool = Object.values(users).filter(u => !u.isAdmin).map(u => u.picks?.[matchId]).filter(Boolean);
+    if (!pool.length) return { p1: 33, pX: 34, p2: 33 };
+    const c = { "1": 0, "X": 0, "2": 0 };
+    pool.forEach(val => { if (c[val] !== undefined) c[val]++; });
+    const tot = pool.length;
+    return {
+      p1: Math.round((c["1"] / tot) * 100),
+      pX: Math.round((c["X"] / tot) * 100),
+      p2: Math.round((c["2"] / tot) * 100)
     };
+  }
 
-    const { error: insErr } = await supabaseClient.from('matches').insert([newMatch]);
-    if (insErr) {
-      setAddError("Insertion rejected by schema rules."); return;
+  // AUTOMATED API FIXTURE HARVESTING & PERSISTISTENCE (Idempotent Architecture)
+  async function adminFetchLiveResults() {
+    if (API_FOOTBALL_KEY === "YOUR_API_FOOTBALL_KEY_HERE") {
+      alert("Please provision a valid production API_FOOTBALL_KEY parameter inside the script header.");
+      return;
     }
+    triggerToast("🔄 Contacting API-Football servers...");
+    try {
+      const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${API_LEAGUE_ID}&season=${API_SEASON}`, {
+        method: "GET",
+        headers: { "x-apisports-key": API_FOOTBALL_KEY }
+      });
+      const data = await res.json();
+      if (!data.response || !data.response.length) { alert("Empty payload received from football statistics cluster."); return; }
 
-    await fetchCloudData();
-    setBulkTeam1(""); setBulkTeam2(""); setBulkOdds1(""); setBulkOddsX(""); setBulkOdds2(""); setBulkGroup("");
-    setAddError("");
-    showToast("Match scheduled!");
+      let synchronizedCount = 0;
+      for (const item of data.response) {
+        const fixId = item.fixture.id.toString();
+        const apiStatus = item.fixture.status.short; // FT, AET, PEN
+        
+        // Find if we track this game locally
+        const targetLocalMatch = matches.find(x => x.api_fixture_id === fixId);
+        if (targetLocalMatch && !targetLocalMatch.result) {
+          if (["FT", "AET", "PEN"].includes(apiStatus)) {
+            let finalOutcome = "X";
+            const hGoals = item.goals.home;
+            const aGoals = item.goals.away;
+            if (hGoals > aGoals) finalOutcome = "1";
+            else if (aGoals > hGoals) finalOutcome = "2";
+
+            // Snapshot position indexes to update historical 'previous_rank'
+            // before applying points updates to profiles
+            await commitMatchResultWithRankSnapshot(targetLocalMatch.id, finalOutcome);
+            synchronizedCount++;
+          }
+        }
+      }
+      await fetchAllData();
+      alert(`Automated synchronization complete. Finalized ${synchronizedCount} games.`);
+    } catch (err) { alert(`Pipeline exception: ${err.message}`); }
   }
 
-  async function adminSetResult(matchId, result) {
-    await supabaseClient.from('matches').update({ result }).eq('id', matchId);
-    await fetchCloudData();
-    showToast("Result published!");
+  async function commitMatchResultWithRankSnapshot(matchId, finalOutcome) {
+    // 1. Snapshot previous rank layout state before scores change
+    for (let index = 0; index < sortedLeaderboard.length; index++) {
+      const u = sortedLeaderboard[index];
+      await supabaseClient.from('profiles').update({ previous_rank: index + 1 }).eq('username', u.username);
+    }
+    // 2. Persist outcome securely (Idempotent execution rule)
+    await supabaseClient.from('matches').update({ result: finalOutcome }).eq('id', matchId);
   }
 
-  async function adminUndoResult(matchId) {
-    await supabaseClient.from('matches').update({ result: null }).eq('id', matchId);
-    await fetchCloudData();
-    showToast("Result reverted.");
+  // Manual Administration Backstops
+  async function adminCreateMatch() {
+    if (!matchForm.team1 || !matchForm.team2 || !matchForm.date || !matchForm.odds1) { alert("Missing parameters"); return; }
+    const payload = {
+      id: `match_${Date.now()}`, team1: matchForm.team1, team2: matchForm.team2,
+      match_date: matchForm.date, match_time: matchForm.time,
+      odds1: parseFloat(matchForm.odds1), oddsx: parseFloat(matchForm.oddsX || 3.0), odds2: parseFloat(matchForm.odds2),
+      matchday: matchForm.stage || "1", result: null, api_fixture_id: matchForm.apiFixtureId || null
+    };
+    await supabaseClient.from('matches').insert([payload]);
+    setMatchForm({ team1: "", team2: "", date: "", time: "21:00", odds1: "", oddsX: "", odds2: "", stage: "", apiFixtureId: "" });
+    fetchAllData();
+    triggerToast("Fixture launched!");
   }
 
-  async function adminDeleteMatch(matchId) {
-    if (!window.confirm("Delete match?")) return;
-    await supabaseClient.from('matches').delete().eq('id', matchId);
-    await fetchCloudData();
-    showToast("Match cleared.");
+  async function adminForceResult(mid, res) {
+    if (window.confirm("Manually override game result? This resets leaderboard positions.")) {
+      await commitMatchResultWithRankSnapshot(mid, res);
+      fetchAllData();
+    }
   }
 
-  async function adminDeleteUser(uname) {
-    const targetUser = Object.values(users).find(x => x.username.toLowerCase() === uname.toLowerCase());
-    if (!targetUser) return;
-    if (!window.confirm(`Wipe account "${targetUser.username}"?`)) return;
-
-    await supabaseClient.from('profiles').delete().eq('username', targetUser.username);
-    await fetchCloudData();
-    showToast("Profile purged.");
+  async function adminRevertResult(mid) {
+    await supabaseClient.from('matches').update({ result: null }).eq('id', mid);
+    fetchAllData();
+    triggerToast("Outcome revoked.");
   }
 
-  async function adminUpdateConfig(name, winner) {
-    await supabaseClient.from('tournament_config').update({ tournament_name: name, tournament_winner: winner }).eq('id', 1);
-    setTournamentConfig(prev => ({ ...prev, tournament_name: name, tournament_winner: winner }));
+  async function adminDeleteMatch(mid) {
+    if (window.confirm("Purge match from db?")) {
+      await supabaseClient.from('matches').delete().eq('id', mid);
+      fetchAllData();
+    }
   }
 
-  async function adminUpdateChampionOdds(team, val) {
-    const updatedOdds = { ...tournamentConfig.champion_odds };
-    if (val === "") delete updatedOdds[team]; else updatedOdds[team] = parseFloat(val);
-
-    await supabaseClient.from('tournament_config').update({ champion_odds: updatedOdds }).eq('id', 1);
-    setTournamentConfig(prev => ({ ...prev, champion_odds: updatedOdds }));
+  async function adminSaveWinnerConfig(winner) {
+    await supabaseClient.from('tournament_config').update({ tournament_winner: winner }).eq('id', 1);
+    fetchAllData();
+    triggerToast("Global configuration patched.");
   }
 
-  const pickableMatches = matches.filter(m => !isLocked(m)).sort((a, b) => kickoffDate(a) - kickoffDate(b));
-  const leaderboard = computeLeaderboard();
+  async function adminSetOddsConfig(team, oddsVal) {
+    const copy = { ...tournamentConfig.champion_odds };
+    if (!oddsVal) delete copy[team]; else copy[team] = parseFloat(oddsVal);
+    await supabaseClient.from('tournament_config').update({ champion_odds: copy }).eq('id', 1);
+    setTournamentConfig(p => ({ ...p, champion_odds: copy }));
+  }
+
+  const upcomingMatchesSorted = useMemo(() => {
+    return matches.filter(m => !m.result).sort((a,b) => new Date(a.match_date + "T" + a.match_time) - new Date(b.match_date + "T" + b.match_time));
+  }, [matches]);
+
+  // Matchday Tab Sorting logic: Unlocked at top, locked slide down, keeping chronological alignment within sections
+  const processedMatchdaySplit = useMemo(() => {
+    const futureOnly = upcomingMatchesSorted.filter(m => new Date(m.match_date + "T" + m.match_time) > new Date());
+    const unlocked = [];
+    const locked = [];
+    futureOnly.forEach(m => {
+      if (currentUser?.picks?.[m.id]) locked.push(m); else unlocked.push(m);
+    });
+    return { unlocked, locked };
+  }, [upcomingMatchesSorted, currentUser]);
 
   return (
     <div style={styles.app}>
-      {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#f5c842", color: "#0a0e1a", padding: "12px 24px", borderRadius: 12, fontWeight: 700, fontSize: 14, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>{toast}</div>}
       
+      {/* Dynamic Toast Element */}
+      {toast && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "var(--accent-gold)", color: "#0a0e1a", padding: "12px 24px", borderRadius: 12, fontWeight: 800, fontSize: 14, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>{toast}</div>}
+
+      {/* Primary Header Segment */}
       <nav style={styles.nav}>
-        <div style={styles.logo} onClick={() => setPage(isAdmin ? "admin" : session ? "leaderboard" : "home")}>⚽ Pariuri World Cup 2026</div>
-        {session ? (
-          <>
-            {isAdmin ? (
-              <button style={styles.navBtn(page==="admin")} onClick={() => setPage("admin")}>Admin</button>
-            ) : (
-              [["leaderboard", "Leaderboard"], ["picks", "Next Matchday"], ["results", "Results"], ["schedule", "Schedule"]].map(([key, label]) => (
-                <button key={key} style={styles.navBtn(page===key)} onClick={() => setPage(key)}>{label}</button>
-              ))
-            )}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 13, color: "rgba(232,234,240,0.4)" }}>{currentUser?.username}</span>
-              <button style={{ ...styles.btn("ghost"), padding: "6px 12px", fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }} onClick={handleLogout}>Logout</button>
-            </div>
-          </>
-        ) : (
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...styles.btn("ghost"), padding: "6px 12px", fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }} onClick={() => { setAuthMode("login"); setPage("auth"); }}>Sign in</button>
-            <button style={{ ...styles.btn("primary"), padding: "6px 12px", fontSize: 13 }} onClick={() => { setAuthMode("register"); setPage("auth"); }}>Join</button>
+        <div style={styles.logo}>🏆 {tournamentConfig.tournament_name.toUpperCase()}</div>
+        {session && (
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: 12, color: "var(--accent-gold)", fontWeight: 700 }}>{session.username.toUpperCase()}</span>
+            <button style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontSize: 11, padding: "4px 8px", borderRadius: 6, cursor: "pointer" }} onClick={() => { setSession(null); setPage("home"); }}>LOGOUT</button>
           </div>
         )}
       </nav>
 
-      {!session && page === "home" && (
-        <div style={styles.hero}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>⚽</div>
-          <h1 style={styles.heroTitle}>Pariuri World Cup 2026</h1>
-          <p style={styles.heroSub}>The ultimate football prediction arena with friends.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, marginBottom: 48, textAlign: "left" }}>
-            {[
-              ["⚽", "Pick the result", "Choose 1, X, or 2 for each match before kickoff."],
-              ["📊", "Earn fractional points", "Correct picks score points matching the dynamic match odds."],
-              ["🏆", "Crown the champion", "Predict your tournament winner for custom bonus points."],
-              ["🥇", "Dominate rankings", "Scale the local bracket and out-smart your competition."],
-            ].map(([icon, title, desc]) => (
-              <div key={title} style={{ ...styles.card, padding: "18px 20px" }}>
-                <div style={{ fontSize: 26, marginBottom: 8 }}>{icon}</div>
-                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{title}</div>
-                <div style={{ fontSize: 13, color: "rgba(232,234,240,0.55)", lineHeight: 1.6 }}>{desc}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-            <button style={{ ...styles.btn("primary"), padding: "13px 32px", fontSize: 15 }} onClick={() => { setAuthMode("register"); setPage("auth"); }}>Join the game</button>
-            <button style={{ ...styles.btn("ghost"), padding: "13px 32px", fontSize: 15, border: "1px solid rgba(255,255,255,0.1)" }} onClick={() => { setAuthMode("login"); setPage("auth"); }}>Sign in</button>
-          </div>
-        </div>
-      )}
-
-      {!session && page === "auth" && (
-        <div style={{ maxWidth: 420, margin: "60px auto", padding: "0 24px" }}>
-          <div style={styles.card}>
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>⚽</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#f5c842" }}>Pariuri World Cup 2026</div>
-            </div>
-            <div style={{ display: "flex", marginBottom: 20, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 3 }}>
-              {["login","register"].map(m => (
-                <button key={m} style={{ flex: 1, background: authMode === m ? "rgba(245,200,66,0.15)" : "transparent", border: "none", color: authMode === m ? "#f5c842" : "rgba(232,234,240,0.5)", padding: "9px 0", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13.5 }} onClick={() => { setAuthMode(m); setError(""); }}>
-                  {m === "login" ? "Sign in" : "Register"}
-                </button>
-              ))}
+      {/* PAGE 1: DECOUPLED HOMEPAGE ACCELERATOR */}
+      {page === "home" && (
+        <div style={{ padding: "80px 24px 40px", textAlign: "center", maxWidth: 600, margin: "0 auto" }}>
+          <h1 style={{ fontSize: 44, fontWeight: 900, color: "var(--accent-gold)", margin: "0 0 12px", letterSpacing: "-1.5px" }}>World Cup 2026 Arena</h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: 16, margin: "0 0 40px", lineHeight: 1.5 }}>Join the premier circle of football analysts. Forecast dynamic match odds, unlock tournament badges, and secure the championship leaderboard.</p>
+          
+          <div className="card-styled" style={{ textAlign: "left", padding: 24 }}>
+            <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10, marginBottom: 20 }}>
+              <button style={{ flex: 1, padding: "10px", background: authMode === "login" ? "rgba(245,200,66,0.15)" : "transparent", color: authMode === "login" ? "var(--accent-gold)" : "var(--text-secondary)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700 }} onClick={() => setAuthMode("login")}>Sign In</button>
+              <button style={{ flex: 1, padding: "10px", background: authMode === "register" ? "rgba(245,200,66,0.15)" : "transparent", color: authMode === "register" ? "var(--accent-gold)" : "var(--text-secondary)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700 }} onClick={() => setAuthMode("register")}>Register</button>
             </div>
 
             {authMode === "login" ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div><label style={styles.label}>Username</label><input style={styles.input} value={form.username||""} onChange={e=>setForm(p=>({...p,username:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} /></div>
-                <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&handleLogin()} /></div>
-                {error && <div style={{ color: "#e24b4b", fontSize: 13 }}>{error}</div>}
-                <button style={{ ...styles.btn("primary"), padding: "12px", fontSize: 15 }} onClick={handleLogin}>Sign in</button>
+                <input placeholder="Username" style={className="input-styled"} onChange={e => setForm({ ...form, username: e.target.value })} />
+                <input type="password" placeholder="Password" style={className="input-styled"} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
+                {error && <div style={{ color: "var(--red-loss)", fontSize: 13 }}>{error}</div>}
+                <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000" }} onClick={runLogin}>ENTER STADIUM</button>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div><label style={styles.label}>Username</label><input style={styles.input} value={form.username||""} onChange={e=>setForm(p=>({...p,username:e.target.value}))} /></div>
-                <div><label style={styles.label}>Password</label><input style={styles.input} type="password" value={form.password||""} onChange={e=>setForm(p=>({...p,password:e.target.value}))} /></div>
-                <div><label style={styles.label}>Confirm password</label><input style={styles.input} type="password" value={form.password2||""} onChange={e=>setForm(p=>({...p,password2:e.target.value}))} /></div>
-                <div>
-                  <label style={styles.label}>❤️ Pick your favourite team (NO Bonus Points)</label>
-                  <select style={styles.input} value={form.favoriteTeam||""} onChange={e=>setForm(p=>({...p,favoriteTeam:e.target.value}))}>
-                    <option value="">Choose your fan team...</option>
-                    {TEAMS.map(t=><option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
-                  </select>
-                </div>
-                {error && <div style={{ color: "#e24b4b", fontSize: 13 }}>{error}</div>}
-                <button style={{ ...styles.btn("primary"), padding: "12px", fontSize: 15 }} onClick={handleRegister}>Create account</button>
+                <input placeholder="Choose Username" style={className="input-styled"} onChange={e => setForm({ ...form, username: e.target.value })} />
+                <input type="password" placeholder="Password" style={className="input-styled"} onChange={e => setForm({ ...form, password: e.target.value })} />
+                <select style={className="input-styled"} onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
+                  <option value="">Select Favorite Team ❤️</option>
+                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
+                </select>
+                {error && <div style={{ color: "var(--red-loss)", fontSize: 13 }}>{error}</div>}
+                <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000" }} onClick={runRegister}>REGISTER PROFILE</button>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {session && !isAdmin && page === "leaderboard" && (
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
+      {/* PAGE 2: INITIAL TIMING GATEWAY SCREEN */}
+      {page === "gateway" && (
+        <div style={{ textAlign: "center", padding: "100px 24px", maxWidth: 540, margin: "0 auto" }}>
+          <div style={{ fontSize: 64, marginBottom: 16 }}>⏳</div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px" }}>THE ARENA LOCKS SOON</h2>
+          <p style={{ color: "var(--text-secondary)", fontSize: 14, margin: "0 0 32px" }}>The World Cup tournament framework is initializing. Set your parameters before opening kickoff.</p>
           
-          {/* TOURNAMENT CHAMPION MANAGEMENT PANEL FOR PLAYERS */}
-          <div style={{ ...styles.card, border: "1px solid rgba(245,200,66,0.35)", background: "rgba(245,200,66,0.02)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div className="card-styled" style={{ background: "linear-gradient(135deg, #181d36 0%, #2a220d 100%)", padding: "24px 16px", marginBottom: 32 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent-gold)", letterSpacing: "1px", marginBottom: 6 }}>COUNTDOWN TO GLORY</div>
+            <div style={{ fontSize: 32, fontWeight: 900, fontFamily: "monospace", letterSpacing: "1px" }}>{globalTimer}</div>
+          </div>
+
+          <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", padding: "14px 44px", fontSize: 16, borderRadius: 12, boxShadow: "0 4px 16px rgba(245,200,66,0.25)" }} onClick={() => setPage("profile")}>ENTER ARENA →</button>
+        </div>
+      )}
+
+      {/* USER SCREEN CONTENT AREA */}
+      <div className="container">
+        
+        {/* TAB A: PROFILE VIEW */}
+        {page === "profile" && currentUser && (
+          <div>
+            <div className="card-styled" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(to right, var(--card-bg), #1a223d)" }}>
               <div>
-                <h3 style={{ margin: 0, color: "#f5c842", fontSize: 18, fontWeight: 800 }}>🏆 Predict the Tournament Winner</h3>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "rgba(232,234,240,0.5)" }}>Correct answers grant bonus points computed from active team betting odds.</p>
+                <div style={{ textTransform: "uppercase", fontSize: 11, fontWeight: 700, color: "var(--accent-gold)", letterSpacing: "0.5px" }}>Contender Card</div>
+                <h2 style={{ margin: "2px 0 6px", fontSize: 24, fontWeight: 900 }}>{currentUser.username}</h2>
+                <div style={{ display: "flex", gap: 8 }}><span style={styles.badge()}>❤️ {currentUser.favoriteTeam} Fan</span></div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <span style={styles.badge("gold")}>⏱️ {kickoffCountdown}</span>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Rank Status</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "var(--accent-gold)" }}>#{sortedLeaderboard.findIndex(x => x.username.toLowerCase() === currentUser.username.toLowerCase()) + 1}</div>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 14, alignItems: "center" }}>
-              <div style={{ flex: 1 }}>
-                <select 
-                  style={styles.input} 
-                  value={currentUser?.tournamentWinnerPick || ""} 
-                  disabled={currentUser?.isPickLocked || kickoffCountdown === "Tournament Started"}
-                  onChange={(e) => handleAutosaveWinner(e.target.value)}
-                >
-                  <option value="">Choose winning champion...</option>
-                  {TEAMS.map(t => {
-                    const odds = tournamentConfig.champion_odds[t] || "10.00";
-                    return <option key={t} value={t}>{flagEmoji(t)} {t} (Odds: {odds})</option>;
-                  })}
+            {/* Champion Predictor Block */}
+            <div className="card-styled" style={{ border: "1px solid rgba(245,200,66,0.25)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>🏆 Predicted World Cup Winner</h4>
+                {currentUser.isPickLocked && <span style={styles.badge("green")}>LOCKED 🔒</span>}
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <select className="input-styled" style={{ flex: 1 }} value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
+                  <option value="">Select Champion Team...</option>
+                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} (Odds: {tournamentConfig.champion_odds[t] || "10.0"})</option>)}
                 </select>
+                {!currentUser.isPickLocked && !isTournamentBegun && (
+                  <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", fontSize: 12, padding: "0 14px" }} onClick={lockChampionChoice}>LOCK</button>
+                )}
               </div>
-
-              {!currentUser?.isPickLocked && kickoffCountdown !== "Tournament Started" && (
-                <button 
-                  style={{ ...styles.btn("primary"), padding: "10px 16px", whiteSpace: "nowrap", fontWeight: 700 }}
-                  onClick={handleLockPick}
-                >
-                  Lock Pick 🔒
-                </button>
-              )}
             </div>
 
-            {currentUser?.isPickLocked && (
-              <div style={{ marginTop: 12, background: "rgba(76,175,80,0.1)", border: "1px solid rgba(76,175,80,0.3)", padding: "8px 12px", borderRadius: 8, fontSize: 13, color: "#4caf50", fontWeight: 600 }}>
-                🔒 Your prediction is locked: {currentUser?.tournamentWinnerPick ? `${flagEmoji(currentUser.tournamentWinnerPick)} ${currentUser.tournamentWinnerPick}` : ""}
-              </div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "24px 0 12px" }}>📊 Your Historical Slips</h3>
+            {matches.filter(m => m.result).length === 0 ? (
+              <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: "30px 0", fontSize: 13 }}>Finalized data will appear post-match.</div>
+            ) : (
+              matches.filter(m => m.result).map(m => {
+                const choice = currentUser.picks?.[m.id];
+                const gained = choice === m.result ? (parseFloat(m[m.result === "1" ? "odds1" : m.result === "X" ? "oddsx" : "odds2"]) || 0).toFixed(2) : "0.00";
+                return (
+                  <div key={m.id} className="card-styled" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: `4px solid ${parseFloat(gained) > 0 ? "var(--green-win)" : "var(--red-loss)"}` }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>Outcome: [{m.result}] · Selection: [{choice || "None"}]</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}><span style={styles.badge(parseFloat(gained) > 0 ? "green" : "danger")}>+{gained} pts</span></div>
+                  </div>
+                );
+              })
             )}
           </div>
+        )}
 
-          <div style={{ marginBottom: 28, marginTop: 24 }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Leaderboard</h2>
-            <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} · {leaderboard.length} players · Click a player to see their history</p>
-          </div>
-
-          {tournamentConfig.tournament_winner && (
-            <div style={{ ...styles.card, background: "rgba(245,200,66,0.08)", border: "1px solid rgba(245,200,66,0.25)", marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 28 }}>🏆</div>
-              <div>
-                <div style={{ fontWeight: 700, color: "#f5c842" }}>Official champion: {flagEmoji(tournamentConfig.tournament_winner)} {tournamentConfig.tournament_winner}</div>
+        {/* TAB B: LEADERBOARD VIEW */}
+        {page === "leaderboard" && (
+          <div>
+            {matchdayMvpNode && (
+              <div className="card-styled" style={{ background: "linear-gradient(135deg, #12192e 0%, #3a3010 100%)", border: "1px solid var(--accent-gold)", textAlign: "center", padding: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.5px" }}>🔥 MATCHDAY {matchdayMvpNode.matchday} RECORD HOLDER 🔥</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "var(--accent-gold)", margin: "4px 0" }}>{matchdayMvpNode.username.toUpperCase()}</div>
+                <div style={{ fontSize: 12, color: "var(--text-primary)" }}>Dominated the bracket with <strong>{matchdayMvpNode.wins}</strong> correct wins!</div>
               </div>
-            </div>
-          )}
+            )}
 
-          {currentUser && (
-            <div 
-              style={{ ...styles.card, ...styles.clickableCard, background: "rgba(245,200,66,0.06)", border: "1px solid rgba(245,200,66,0.2)", marginBottom: 24 }}
-              onClick={() => setSelectedInspectUser(currentUser)}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                  <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>Your bracket position</div>
-                  <div style={{ fontWeight: 800, fontSize: 20 }}>#{leaderboard.findIndex(u => u.username?.toLowerCase() === session.username) + 1} — {currentUser.username}</div>
-                </div>
-                <div style={{ textAlign: "right", marginLeft: "auto" }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: "#f5c842" }}>{(leaderboard.find(x=>x.username?.toLowerCase()===session.username)?.computedPoints || 0).toFixed(2)}</div>
-                  <div style={{ fontSize: 11, color: "rgba(232,234,240,0.4)" }}>pts</div>
-                </div>
-              </div>
-              <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
-                <span style={styles.badge("default")}>❤️ Fan of: {currentUser.favoriteTeam ? `${flagEmoji(currentUser.favoriteTeam)} ${currentUser.favoriteTeam}` : "None"}</span>
-                <span style={styles.badge("gold")}>🏆 Prediction: {currentUser.tournamentWinnerPick ? `${flagEmoji(currentUser.tournamentWinnerPick)} ${currentUser.tournamentWinnerPick}` : "Not selected"} {currentUser.isPickLocked && "🔒"}</span>
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
-            {leaderboard.slice(0,3).map((u, i) => (
-              <div 
-                key={u.username} 
-                style={{ ...styles.card, ...styles.clickableCard, background: styles.podium[i]?.bg, border: `1px solid ${styles.podium[i]?.border}`, textAlign: "center", padding: "16px 12px" }}
-                onClick={() => setSelectedInspectUser(u)}
-              >
-                <div style={{ fontSize: 26, marginBottom: 4 }}>{styles.podium[i]?.rank}</div>
-                <div style={{ fontWeight: 800, fontSize: 14, color: styles.podium[i]?.color, marginBottom: 2 }}>{u.username}</div>
-                <div style={{ fontSize: 20, fontWeight: 800 }}>{u.computedPoints.toFixed(2)}</div>
-                <div style={{ fontSize: 11, marginTop: 6, color: "rgba(232,234,240,0.45)", display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span>❤️ {u.favoriteTeam ? flagEmoji(u.favoriteTeam) : "🏳️"}</span>
-                  <span>🏆 {u.tournamentWinnerPick ? flagEmoji(u.tournamentWinnerPick) : "🏳️"} {u.isPickLocked && "🔒"}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {leaderboard.slice(3).map((u, i) => (
-            <div 
-              key={u.username} 
-              style={{ ...styles.card, ...styles.clickableCard, display: "flex", alignItems: "center", gap: 14, padding: "14px 20px" }}
-              onClick={() => setSelectedInspectUser(u)}
-            >
-              <div style={{ width: 28, textAlign: "center", fontWeight: 700, color: "rgba(232,234,240,0.3)" }}>#{i+4}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</div>
-                <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)", display: "flex", gap: 10 }}>
-                  <span>Fan: {u.favoriteTeam ? `${flagEmoji(u.favoriteTeam)} ${u.favoriteTeam}` : "🏳️"}</span>
-                  <span>Champ: {u.tournamentWinnerPick ? `${flagEmoji(u.tournamentWinnerPick)} ${u.tournamentWinnerPick}` : "🏳️"} {u.isPickLocked && "🔒"}</span>
-                </div>
-              </div>
-              <div style={{ fontWeight: 800, fontSize: 18 }}>{u.computedPoints.toFixed(2)}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* INSPECT USER MODAL OVERLAY */}
-      {selectedInspectUser && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedInspectUser(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 12, marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 22, color: "#f5c842", fontWeight: 800 }}>👤 {selectedInspectUser.username}'s Profile</h3>
-              <button style={{ ...styles.btn("ghost"), padding: "4px 10px", fontSize: 18 }} onClick={() => setSelectedInspectUser(null)}>✕</button>
+            <div style={{ marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Arena Standings</h3>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Sorted by Cumulative Odds Points → Tiebreaker: Total Prediction Wins</div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20, background: "rgba(255,255,255,0.03)", padding: 14, borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: 14 }}><strong style={{ color: "rgba(232,234,240,0.5)" }}>❤️ Favorite Fan Team:</strong> {selectedInspectUser.favoriteTeam ? `${flagEmoji(selectedInspectUser.favoriteTeam)} ${selectedInspectUser.favoriteTeam}` : "Not declared"}</div>
-              <div style={{ fontSize: 14 }}>
-                <strong style={{ color: "rgba(232,234,240,0.5)" }}>🏆 Predicted Champion:</strong> {
-                  kickoffCountdown === "Tournament Started" || selectedInspectUser.isPickLocked || selectedInspectUser.username === currentUser?.username ? (
-                    selectedInspectUser.tournamentWinnerPick ? `${flagEmoji(selectedInspectUser.tournamentWinnerPick)} ${selectedInspectUser.tournamentWinnerPick}` : "None"
-                  ) : (
-                    "🙈 Hidden until lockout"
-                  )
-                } {selectedInspectUser.isPickLocked && "🔒"}
-              </div>
-              <div style={{ fontSize: 14 }}><strong style={{ color: "rgba(232,234,240,0.5)" }}>📊 Total Calculated Score:</strong> <span style={{ color: "#f5c842", fontWeight: 700 }}>{selectedInspectUser.computedPoints?.toFixed(2) || "0.00"} pts</span></div>
-            </div>
+            {sortedLeaderboard.map((u, i) => {
+              const currentRank = i + 1;
+              const prev = u.previousRank || currentRank;
+              const delta = prev - currentRank;
+              const isMVP = matchdayMvpNode && matchdayMvpNode.username.toLowerCase() === u.username.toLowerCase();
 
-            <h4 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700 }}>📋 Match slips & historical choices</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {matches.length === 0 ? (
-                <p style={{ fontSize: 13, color: "rgba(232,234,240,0.4)" }}>No fixtures configured in engine.</p>
-              ) : (
-                matches.map(m => {
-                  const hasStarted = isLocked(m);
-                  const registeredPick = selectedInspectUser.picks?.[m.id];
-                  const isOwnProfile = selectedInspectUser.username === currentUser?.username;
-
-                  // Privacy safe shield rule check
-                  let visualPickDisplay = "➖ No Pick";
-                  if (registeredPick) {
-                    if (hasStarted || isOwnProfile) {
-                      visualPickDisplay = `Picked [${registeredPick}]`;
-                    } else {
-                      visualPickDisplay = "🔒 Secret Slips";
-                    }
-                  }
-
-                  let badgeStatus = "default";
-                  if (m.result && registeredPick) {
-                    badgeStatus = registeredPick === m.result ? "green" : "danger";
-                  }
-
-                  return (
-                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.01)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div style={{ fontSize: 13 }}>
-                        <div style={{ fontWeight: 600 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                        <div style={{ fontSize: 11, color: "rgba(232,234,240,0.3)" }}>{m.match_date} {m.result && `(Result: ${m.result})`}</div>
-                      </div>
-                      <div>
-                        <span style={{ 
-                          ...styles.badge(badgeStatus === "green" ? "green" : ""), 
-                          background: badgeStatus === "green" ? "rgba(76,175,80,0.15)" : badgeStatus === "danger" ? "rgba(226,75,75,0.15)" : "rgba(255,255,255,0.06)",
-                          color: badgeStatus === "green" ? "#4caf50" : badgeStatus === "danger" ? "#e24b4b" : "rgba(232,234,240,0.5)"
-                        }}>
-                          {visualPickDisplay}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {session && !isAdmin && page === "picks" && (
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ marginBottom: 28 }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Next matchday</h2>
-            <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>⏱ Picks lock automatically at match kickoff</p>
-          </div>
-          {pickableMatches.slice(0, 10).length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(232,234,240,0.3)" }}>No upcoming fixtures with odds. Check back soon!</div>
-          ) : (
-            pickableMatches.slice(0, 10).map(m => {
-              const userPick = currentUser?.picks?.[m.id];
-              const cd = countdown(m);
               return (
-                <div key={m.id} style={styles.card}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: 17 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                      <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)", marginTop: 3 }}>{m.match_date} · {m.match_time} {m.tournament_stage && `· ${m.tournament_stage}`}</div>
-                    </div>
-                    {cd && <span style={styles.badge("gold")}>⏱ {cd}</span>}
+                <div key={u.username} className="card-styled" style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer", border: isMVP ? "1.5px solid var(--accent-gold)" : "1px solid rgba(255,255,255,0.06)" }} onClick={() => setInspectUser(u)}>
+                  
+                  {/* Rank & Indicator Widget */}
+                  <div style={{ width: 44, textAlign: "center" }}>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: currentRank <= 3 ? "var(--accent-gold)" : "#fff" }}>#{currentRank}</div>
+                    {delta !== 0 && (
+                      <div style={{ fontSize: 11, fontWeight: 800, color: delta > 0 ? "var(--green-win)" : "var(--red-loss)" }}>
+                        {delta > 0 ? `↑${delta}` : `↓${Math.abs(delta)}`}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    {[["1", m.odds1, m.team1], ["X", m.oddsx, "Draw"], ["2", m.odds2, m.team2]].map(([val, odds, label]) => (
-                      <button key={val} style={{ ...styles.pickBtn(userPick === val, val), flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }} onClick={() => makePick(m.id, val)}>
-                        <span style={{ fontSize: 11, opacity: 0.6 }}>{label}</span>
-                        <span style={{ fontSize: 16 }}>{val}</span>
-                        <span style={{ fontSize: 13, fontWeight: 800 }}>{odds}</span>
-                      </button>
-                    ))}
+
+                  {/* Identity Profile */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
+                      {u.username} {isMVP && "👑"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{flagEmoji(u.favoriteTeam)} {u.favoriteTeam} Fan</div>
+                  </div>
+
+                  {/* Scores Output */}
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "var(--accent-gold)" }}>{u.totalPoints.toFixed(2)}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>{u.correctWins} Wins</div>
                   </div>
                 </div>
               );
-            })
-          )}
-        </div>
-      )}
-
-      {session && !isAdmin && page === "results" && (
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ marginBottom: 28 }}>
-            <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Results</h2>
+            })}
           </div>
-          {matches.filter(m => m.result).sort((a,b) => kickoffDate(b) - kickoffDate(a)).map(m => {
-            const userPick = currentUser?.picks?.[m.id];
-            const correct = userPick === m.result;
-            return (
-              <div key={m.id} style={{ ...styles.card, background: correct ? "rgba(76,175,80,0.05)" : "rgba(255,255,255,0.04)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div style={{ fontWeight: 800 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                  <div style={{ color: "#f5c842", fontWeight: 700 }}>Outcome: {m.result}</div>
-                </div>
-                <div style={{ marginTop: 10 }}>
-                  {userPick ? <span style={styles.badge(correct ? "green" : "")}>Your selection: {userPick}</span> : <span>No prediction logged</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+        )}
 
-      {session && !isAdmin && page === "schedule" && (
-        <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-            {["ALL", "UPCOMING", "RESULTS"].map(f => (
-              <button key={f} style={styles.btn(scheduleFilter===f?"primary":"ghost")} onClick={()=>setScheduleFilter(f)}>{f}</button>
-            ))}
-          </div>
-          {matches.filter(m => {
-            if (scheduleFilter === "UPCOMING") return !m.result;
-            if (scheduleFilter === "RESULTS") return !!m.result;
-            return true;
-          }).map(m => (
-            <div key={m.id} style={styles.card}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", textAlign: "center" }}>
-                <div>{flagEmoji(m.team1)} {m.team1}</div>
-                <div style={{ fontWeight: 800, background: "rgba(255,255,255,0.05)", padding: "4px 12px", borderRadius: 6 }}>
-                  {m.result ? `FT: ${m.result}` : m.match_time}
-                </div>
-                <div>{m.team2} {flagEmoji(m.team2)}</div>
-              </div>
+        {/* TAB C: MATCHDAY TIMELINE VIEW */}
+        {page === "matchday" && (
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Timeline Forecasts</h3>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Unlocked choices remain floating at top; locked selections drop lower.</div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {session && isAdmin && page === "admin" && (
-        <div style={{ maxWidth: 780, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-            {["matches","results","tournament","players"].map(k => (
-              <button key={k} style={styles.btn(adminTab===k?"primary":"ghost")} onClick={() => setAdminTab(k)}>{k.toUpperCase()}</button>
-            ))}
-          </div>
+            {processedMatchdaySplit.unlocked.length === 0 && processedMatchdaySplit.locked.length === 0 && (
+              <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: "50px 0" }}>No pending matches available on the timeline.</div>
+            )}
 
-          {adminTab === "matches" && (
-            <div>
-              <div style={styles.card}>
-                <div style={{ fontWeight: 700, marginBottom: 16 }}>Schedule Single Match</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <select style={styles.input} value={bulkTeam1} onChange={e=>setBulkTeam1(e.target.value)}><option value="">Home team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
-                  <select style={styles.input} value={bulkTeam2} onChange={e=>setBulkTeam2(e.target.value)}><option value="">Away team...</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
-                  <input type="date" style={styles.input} value={bulkDate} onChange={e=>setBulkDate(e.target.value)} />
-                  <input type="time" style={styles.input} value={bulkTime} onChange={e=>setBulkTime(e.target.value)} />
-                  <input type="number" step="0.01" style={styles.input} placeholder="Odds 1" value={bulkOdds1} onChange={e=>setBulkOdds1(e.target.value)} />
-                  <input type="number" step="0.01" style={styles.input} placeholder="Odds X" value={bulkOddsX} onChange={e=>setBulkOddsX(e.target.value)} />
-                  <input type="number" step="0.01" style={styles.input} placeholder="Odds 2" value={bulkOdds2} onChange={e=>setBulkOdds2(e.target.value)} />
-                  <input style={styles.input} placeholder="Stage (e.g. Group A)" value={bulkGroup} onChange={e=>setBulkGroup(e.target.value)} />
-                </div>
-                {addError && <div style={{ color: "#e24b4b", marginTop: 8 }}>{addError}</div>}
-                <button style={{ ...styles.btn("primary"), marginTop: 16 }} onClick={adminAddMatch}>Add match</button>
-              </div>
+            {/* UNLOCKED SECTION SEPARATE */}
+            {processedMatchdaySplit.unlocked.map(m => {
+              const distrib = computeGlobalBetDistribution(m.id);
+              const userSelection = currentUser?.picks?.[m.id];
+              return (
+                <div key={m.id} className="card-styled" style={{ borderLeft: "4px solid var(--accent-gold)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-secondary)", marginBottom: 8 }}>
+                    <span>Round {m.matchday} · {m.match_date}</span>
+                    <span style={{ fontWeight: 700, color: "var(--accent-gold)" }}>⏳ OPEN</span>
+                  </div>
+                  <div style={{ textAlign: "center", fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
+                    {flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}
+                  </div>
+                  
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={styles.pickBtn(userSelection === "1", "1")} onClick={() => submitPrediction(m.id, "1")}>
+                      <span style={{ fontSize: 10 }}>HOME</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds1}</span>
+                    </button>
+                    <button style={styles.pickBtn(userSelection === "X", "X")} onClick={() => submitPrediction(m.id, "X")}>
+                      <span style={{ fontSize: 10 }}>DRAW</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.oddsx}</span>
+                    </button>
+                    <button style={styles.pickBtn(userSelection === "2", "2")} onClick={() => submitPrediction(m.id, "2")}>
+                      <span style={{ fontSize: 10 }}>AWAY</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds2}</span>
+                    </button>
+                  </div>
 
-              {matches.filter(m => !m.result).map(m => (
-                <div key={m.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>{m.team1} vs {m.team2} ({m.match_date})</div>
-                  <button style={styles.btn("danger")} onClick={() => adminDeleteMatch(m.id)}>Delete</button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {adminTab === "results" && (
-            <div>
-              {matches.filter(m => !m.result && kickoffDate(m) <= new Date()).sort((a, b) => kickoffDate(a) - kickoffDate(b)).map(m => (
-                <div key={m.id} style={styles.card}>
-                  <div style={{ fontWeight: 700, marginBottom: 10 }}>{m.team1} vs {m.team2}</div>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "1")}>1</button>
-                    <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "X")}>X</button>
-                    <button style={styles.btn("ghost")} onClick={() => adminSetResult(m.id, "2")}>2</button>
+                  {/* Live Community Percentage Matrix */}
+                  <div style={{ marginTop: 14, fontSize: 11, color: "var(--text-secondary)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Community Bets</span>
+                      <span>1: {distrib.p1}% | X: {distrib.pX}% | 2: {distrib.p2}%</span>
+                    </div>
+                    <div className="pct-bar-wrapper">
+                      <div className="pct-segment" style={{ width: `${distrib.p1}%`, background: "var(--green-win)" }}></div>
+                      <div className="pct-segment" style={{ width: `${distrib.pX}%`, background: "var(--accent-gold)" }}></div>
+                      <div className="pct-segment" style={{ width: `${distrib.p2}%`, background: "var(--blue-draw)" }}></div>
+                    </div>
                   </div>
                 </div>
-              ))}
-              {matches.filter(m => m.result).sort((a,b) => kickoffDate(b) - kickoffDate(a)).map(m => (
-                <div key={m.id} style={{ ...styles.card, display: "flex", justifyContent: "space-between" }}>
-                  <div>{m.team1} vs {m.team2} [Winner: {m.result}]</div>
-                  <button style={styles.btn("ghost")} onClick={() => adminUndoResult(m.id)}>Undo</button>
+              );
+            })}
+
+            {/* LOCKED SECTIONS LOWER LAYER */}
+            {processedMatchdaySplit.locked.map(m => {
+              const distrib = computeGlobalBetDistribution(m.id);
+              const userSelection = currentUser?.picks?.[m.id];
+              return (
+                <div key={m.id} className="card-styled" style={{ opacity: 0.8, background: "#0d1121" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-secondary)", marginBottom: 8 }}>
+                    <span>Round {m.matchday} · {m.match_date}</span>
+                    <span style={{ fontWeight: 700, color: "var(--text-secondary)" }}>🔒 LOCKED SLIP</span>
+                  </div>
+                  <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, marginBottom: 14, color: "var(--text-secondary)" }}>
+                    {flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}
+                  </div>
+                  
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={styles.pickBtn(userSelection === "1", "1")} onClick={() => submitPrediction(m.id, "1")}>
+                      <span style={{ fontSize: 10 }}>HOME</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds1}</span>
+                    </button>
+                    <button style={styles.pickBtn(userSelection === "X", "X")} onClick={() => submitPrediction(m.id, "X")}>
+                      <span style={{ fontSize: 10 }}>DRAW</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.oddsx}</span>
+                    </button>
+                    <button style={styles.pickBtn(userSelection === "2", "2")} onClick={() => submitPrediction(m.id, "2")}>
+                      <span style={{ fontSize: 10 }}>AWAY</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds2}</span>
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: 14, fontSize: 11, color: "var(--text-secondary)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Community Bets</span>
+                      <span>1: {distrib.p1}% | X: {distrib.pX}% | 2: {distrib.p2}%</span>
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* BACKEND SYSTEMS CONTROL HUB (ADMIN PROFILE) */}
+        {page === "admin" && isAdmin && (
+          <div>
+            <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10, marginBottom: 20 }}>
+              {["matches", "results", "winner", "players"].map(t => (
+                <button key={t} style={{ flex: 1, padding: "8px", background: adminTab === t ? "var(--accent-gold)" : "transparent", color: adminTab === t ? "#000" : "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer" }} onClick={() => setAdminTab(t)}>{t.toUpperCase()}</button>
               ))}
             </div>
-          )}
 
-          {adminTab === "tournament" && (
-            <div style={styles.card}>
-              <label style={styles.label}>Tournament Headline</label>
-              <input style={{ ...styles.input, marginBottom: 14 }} value={tournamentConfig.tournament_name} onChange={e => adminUpdateConfig(e.target.value, tournamentConfig.tournament_winner)} />
-              
-              <label style={styles.label}>Set Decided Tournament Winner</label>
-              <select style={styles.input} value={tournamentConfig.tournament_winner || ""} onChange={e => adminUpdateConfig(tournamentConfig.tournament_name, e.target.value || null)}>
-                <option value="">Tournament Ongoing</option>
-                {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+            {adminTab === "matches" && (
+              <div>
+                <div className="card-styled">
+                  <h4 style={{ margin: "0 0 14px" }}>Schedule Launch Fixture</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <select className="input-styled" value={matchForm.team1} onChange={e=>setMatchForm({...matchForm, team1:e.target.value})}><option value="">Home Team</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
+                    <select className="input-styled" value={matchForm.team2} onChange={e=>setMatchForm({...matchForm, team2:e.target.value})}><option value="">Away Team</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
+                    <input type="date" className="input-styled" value={matchForm.date} onChange={e=>setMatchForm({...matchForm, date:e.target.value})} />
+                    <input type="time" className="input-styled" value={matchForm.time} onChange={e=>setMatchForm({...matchForm, time:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Odds 1" className="input-styled" value={matchForm.odds1} onChange={e=>setMatchForm({...matchForm, odds1:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Odds X" className="input-styled" value={matchForm.oddsX} onChange={e=>setMatchForm({...matchForm, oddsX:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Odds 2" className="input-styled" value={matchForm.odds2} onChange={e=>setMatchForm({...matchForm, odds2:e.target.value})} />
+                    <input placeholder="Matchday Stage Number" className="input-styled" value={matchForm.stage} onChange={e=>setMatchForm({...matchForm, stage:e.target.value})} />
+                  </div>
+                  <input placeholder="API-Football Fixture ID Link (Optional)" className="input-styled" style={{ marginTop: 10 }} value={matchForm.apiFixtureId} onChange={e=>setMatchForm({...matchForm, apiFixtureId:e.target.value})} />
+                  <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", marginTop: 14, width: "100%" }} onClick={adminCreateMatch}>PROVISION FIXTURE</button>
+                </div>
 
-              <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {TEAMS.map(t => (
-                  <div key={t} style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: 6, borderRadius: 6 }}>
-                    <span style={{ flex: 1, fontSize: 12 }}>{t}</span>
-                    <input type="number" step="0.01" style={{ ...styles.input, width: 70 }} value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminUpdateChampionOdds(t, e.target.value)} />
+                <h4 style={{ margin: "20px 0 10px" }}>Launched Match Framework Timeline</h4>
+                {matches.sort((a,b)=> new Date(a.match_date) - new Date(b.match_date)).map(m => (
+                  <div key={m.id} className="card-styled" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{m.team1} vs {m.team2}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Odds: {m.odds1} | {m.oddsx} | {m.odds2} {m.api_fixture_id && `· Connected API: ${m.api_fixture_id}`}</div>
+                    </div>
+                    <button className="btn-styled" style={{ background: "var(--red-loss)", color: "#fff", fontSize: 11, padding: "5px 10px" }} onClick={() => adminDeleteMatch(m.id)}>DELETE</button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {adminTab === "players" && (
-            <div>
-              {Object.keys(users).map(k => {
-                const u = users[k];
-                return (
-                  <div key={k} style={{ ...styles.card, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <strong>{u.username}</strong> {u.isAdmin && "(Admin)"}
-                      <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>
-                        Fan: {u.favoriteTeam} | Prediction: {u.tournamentWinnerPick} {u.isPickLocked && "🔒"}
-                      </div>
+            {adminTab === "results" && (
+              <div>
+                <div className="card-styled" style={{ background: "linear-gradient(135deg, #131a35 0%, #0d1224 100%)", border: "1px solid var(--accent-gold)", marginBottom: 20 }}>
+                  <h4 style={{ margin: "0 0 6px" }}>Automated API-Football Result Synchronization</h4>
+                  <p style={{ margin: "0 0 14px", fontSize: 12, color: "var(--text-secondary)" }}>Executes background validation with sports data providers to fetch results, close matches, and update profiles tracking previous rankings safely.</p>
+                  <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", width: "100%" }} onClick={adminFetchLiveResults}>RUN API PIPELINE HARVEST</button>
+                </div>
+
+                <h4 style={{ margin: "20px 0 10px" }}>Manual Fallback Resolution Terminal</h4>
+                {matches.map(m => (
+                  <div key={m.id} className="card-styled">
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>{m.team1} vs {m.team2}</span>
+                      <span style={{ color: "var(--accent-gold)", fontWeight: 700 }}>{m.result ? `RESULT: ${m.result}` : "PENDING"}</span>
                     </div>
-                    {!u.isAdmin && <button style={styles.btn("danger")} onClick={() => adminDeleteUser(k)}>Delete Account</button>}
+                    <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                      <button className="btn-styled" style={{ padding: "6px", flex: 1, fontSize: 11 }} onClick={() => adminForceResult(m.id, "1")}>HOME WIN (1)</button>
+                      <button className="btn-styled" style={{ padding: "6px", flex: 1, fontSize: 11 }} onClick={() => adminForceResult(m.id, "X")}>DRAW (X)</button>
+                      <button className="btn-styled" style={{ padding: "6px", flex: 1, fontSize: 11 }} onClick={() => adminForceResult(m.id, "2")}>AWAY WIN (2)</button>
+                      {m.result && <button className="btn-styled" style={{ padding: "6px", background: "var(--text-secondary)", color: "#fff", fontSize: 11 }} onClick={() => adminRevertResult(m.id)}>UNDO</button>}
+                      <button className="btn-styled" style={{ padding: "6px", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 11 }} onClick={() => setInspectMatchBets(m)}>AUDIT SLIPS</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {adminTab === "winner" && (
+              <div className="card-styled">
+                <h4 style={{ margin: "0 0 12px" }}>Tournament Finalization Bracket</h4>
+                <label style={{ fontSize: 11, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Select Official World Cup Champion Team</label>
+                <select className="input-styled" style={{ marginBottom: 20 }} value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
+                  <option value="">Tournament Active...</option>
+                  {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+
+                <h4 style={{ margin: "0 0 10px" }}>Provision Champion Betting Odds</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {TEAMS.map(t => (
+                    <div key={t} style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: "6px 10px", borderRadius: 8 }}>
+                      <span style={{ flex: 1, fontSize: 12 }}>{t}</span>
+                      <input type="number" step="0.01" style={{ ...className="input-styled", width: 74, padding: 6 }} placeholder="10.0" value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminSetOddsConfig(t, e.target.value)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {adminTab === "players" && (
+              <div>
+                <h4 style={{ margin: "0 0 12px" }}>User Database Allocation Panel</h4>
+                {Object.keys(users).map(k => {
+                  const target = users[k];
+                  return (
+                    <div key={k} className="card-styled" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{target.username} {target.isAdmin && <span style={{ color: "var(--accent-gold)" }}>(Admin)</span>}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Fan: {target.favoriteTeam} | Pick: {target.tournamentWinnerPick || "None"}</div>
+                      </div>
+                      {!target.isAdmin && (
+                        <button className="btn-styled" style={{ background: "var(--red-loss)", color: "#fff", fontSize: 11, padding: "5px 12px" }} onClick={async () => {
+                          if (window.confirm("Purge account records completely?")) {
+                            await supabaseClient.from('profiles').delete().eq('username', target.username);
+                            fetchAllData();
+                          }
+                        }}>DELETE</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* COMPACT BOTTOM NAVIGATION MATRIX FOR MOBILE LAYOUTS */}
+      {session && !currentUser?.isAdmin && (
+        <div className="bottom-nav">
+          <button className={`bottom-nav-btn ${page === "profile" ? "active" : ""}`} onClick={() => setPage("profile")}>
+            <span className="bottom-nav-icon">👤</span><span>Profile</span>
+          </button>
+          <button className={`bottom-nav-btn ${page === "leaderboard" ? "active" : ""}`} onClick={() => setPage("leaderboard")}>
+            <span className="bottom-nav-icon">📊</span><span>Standings</span>
+          </button>
+          <button className={`bottom-nav-btn ${page === "matchday" ? "active" : ""}`} onClick={() => setPage("matchday")}>
+            <span className="bottom-nav-icon">⚽</span><span>Matchday</span>
+          </button>
+        </div>
+      )}
+
+      {/* MODAL WINDOW SYSTEM I: INDIVIDUAL MEMBER INSPECTION */}
+      {inspectUser && (
+        <div style={styles.modalOverlay} onClick={() => setInspectUser(null)}>
+          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: "var(--accent-gold)" }}>👤 {inspectUser.username}'s Profile</h3>
+              <button style={{ background: "transparent", border: "none", color: "#fff", fontSize: 16, cursor: "pointer" }} onClick={() => setInspectUser(null)}>✕</button>
+            </div>
+            
+            <div style={{ background: "rgba(255,255,255,0.03)", padding: 14, borderRadius: 12, display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+              <div style={{ fontSize: 13 }}><strong>Favorite Team:</strong> {flagEmoji(inspectUser.favoriteTeam)} {inspectUser.favoriteTeam || "None"}</div>
+              <div style={{ fontSize: 13 }}>
+                <strong>Champion Prediction:</strong> {
+                  (isTournamentBegun || inspectUser.isPickLocked || inspectUser.username.toLowerCase() === currentUser?.username.toLowerCase())
+                    ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick || "Not set"}`
+                    : "🔒 Hidden until Lockout"
+                } {inspectUser.isPickLocked && "🔒"}
+              </div>
+            </div>
+
+            <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>📋 Historic Selections</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {matches.map(m => {
+                const choice = inspectUser.picks?.[m.id];
+                const matchClosed = m.result || new Date(m.match_date + "T" + m.match_time) <= new Date();
+                const visibleText = (matchClosed || inspectUser.username.toLowerCase() === currentUser?.username.toLowerCase())
+                  ? (choice ? `Picked [${choice}]` : "➖ No Pick")
+                  : "🔒 Hidden Slip";
+
+                let stateColor = "default";
+                if (m.result && choice) stateColor = choice === m.result ? "green" : "danger";
+
+                return (
+                  <div key={m.id} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.01)", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div style={{ fontSize: 12 }}>
+                      <div style={{ fontWeight: 700 }}>{m.team1} vs {m.team2}</div>
+                      <div style={{ color: "var(--text-secondary)", fontSize: 10 }}>{m.match_date} {m.result && `(Result: ${m.result})`}</div>
+                    </div>
+                    <span style={styles.badge(stateColor)}>{visibleText}</span>
                   </div>
                 );
               })}
             </div>
-          )}
+          </div>
         </div>
       )}
+
+      {/* MODAL WINDOW SYSTEM II: ADMIN FIXTURE SLIP AUDITING COUNTER-MEASURE */}
+      {inspectMatchBets && (
+        <div style={styles.modalOverlay} onClick={() => setInspectMatchBets(null)}>
+          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 15 }}>📋 Slips History: {inspectMatchBets.team1} vs {inspectMatchBets.team2}</h3>
+              <button style={{ background: "transparent", border: "none", color: "#fff", fontSize: 16, cursor: "pointer" }} onClick={() => setInspectMatchBets(null)}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {Object.values(users).filter(u => !u.isAdmin).map(u => {
+                const choice = u.picks?.[inspectMatchBets.id] || "No Prediction";
+                return (
+                  <div key={u.username} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: 10, borderRadius: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>{u.username}</span>
+                    <span style={styles.badge(choice === inspectMatchBets.result ? "green" : "default")}>{choice}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
