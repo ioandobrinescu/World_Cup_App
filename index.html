@@ -66,6 +66,7 @@ const styles = {
   heroTitle: { fontSize: 52, fontWeight: 800, color: "#f5c842", margin: "0 0 12px", lineHeight: 1.1, letterSpacing: "-2px" },
   heroSub: { fontSize: 18, color: "rgba(232,234,240,0.6)", margin: "0 0 48px" },
   card: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "20px 24px", marginBottom: 16 },
+  clickableCard: { cursor: "pointer", transition: "transform 0.2s, background 0.2s" },
   btn: (variant="primary") => ({ background: variant === "primary" ? "#f5c842" : variant === "danger" ? "#e24b4b" : "rgba(255,255,255,0.07)", color: variant === "primary" ? "#0a0e1a" : "#e8eaf0", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer" }),
   pickBtn: (selected, type) => {
     const colors = { "1": "#4caf50", "X": "#f5c842", "2": "#2196f3" };
@@ -79,6 +80,8 @@ const styles = {
     { bg: "rgba(192,192,192,0.1)", border: "rgba(192,192,192,0.25)", color: "#c0c0c0", rank: "🥈" },
     { bg: "rgba(205,127,50,0.1)", border: "rgba(205,127,50,0.25)", color: "#cd7f32", rank: "🥉" },
   ],
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyCenter: "center", zIndex: 1000, padding: 20, backdropFilter: "blur(4px)" },
+  modalContent: { background: "#0f1626", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, maxWidth: 540, width: "100%", padding: 24, maxHeight: "85vh", overflowY: "auto", position: "relative", margin: "auto" }
 };
 
 const flagEmoji = (team) => {
@@ -122,6 +125,7 @@ function App() {
   const [addError, setAddError] = useState("");
 
   const [kickoffCountdown, setKickoffCountdown] = useState("");
+  const [selectedInspectUser, setSelectedInspectUser] = useState(null);
 
   // Global Countdown Handler for the World Cup Start Date
   useEffect(() => {
@@ -296,7 +300,6 @@ function App() {
     setPage("home");
   }
 
-  // Handle auto-saving the champion pick inside the panel
   async function handleAutosaveWinner(teamSelected) {
     if (currentUser?.isPickLocked || new Date() >= WORLD_CUP_KICKOFF) return;
 
@@ -314,7 +317,6 @@ function App() {
     }
   }
 
-  // Trigger manual lock mechanism
   async function handleLockPick() {
     if (!currentUser?.tournamentWinnerPick) {
       showToast("⚠️ Pick a team before locking your choice.");
@@ -590,7 +592,7 @@ function App() {
 
           <div style={{ marginBottom: 28, marginTop: 24 }}>
             <h2 style={{ margin: "0 0 4px", fontSize: 26, fontWeight: 800 }}>Leaderboard</h2>
-            <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} · {leaderboard.length} players</p>
+            <p style={{ margin: 0, color: "rgba(232,234,240,0.5)", fontSize: 14 }}>{tournamentConfig.tournament_name} · {leaderboard.length} players · Click a player to see their history</p>
           </div>
 
           {tournamentConfig.tournament_winner && (
@@ -603,7 +605,10 @@ function App() {
           )}
 
           {currentUser && (
-            <div style={{ ...styles.card, background: "rgba(245,200,66,0.06)", border: "1px solid rgba(245,200,66,0.2)", marginBottom: 24 }}>
+            <div 
+              style={{ ...styles.card, ...styles.clickableCard, background: "rgba(245,200,66,0.06)", border: "1px solid rgba(245,200,66,0.2)", marginBottom: 24 }}
+              onClick={() => setSelectedInspectUser(currentUser)}
+            >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontSize: 12, color: "rgba(232,234,240,0.4)" }}>Your bracket position</div>
@@ -623,7 +628,11 @@ function App() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
             {leaderboard.slice(0,3).map((u, i) => (
-              <div key={u.username} style={{ ...styles.card, background: styles.podium[i]?.bg, border: `1px solid ${styles.podium[i]?.border}`, textAlign: "center", padding: "16px 12px" }}>
+              <div 
+                key={u.username} 
+                style={{ ...styles.card, ...styles.clickableCard, background: styles.podium[i]?.bg, border: `1px solid ${styles.podium[i]?.border}`, textAlign: "center", padding: "16px 12px" }}
+                onClick={() => setSelectedInspectUser(u)}
+              >
                 <div style={{ fontSize: 26, marginBottom: 4 }}>{styles.podium[i]?.rank}</div>
                 <div style={{ fontWeight: 800, fontSize: 14, color: styles.podium[i]?.color, marginBottom: 2 }}>{u.username}</div>
                 <div style={{ fontSize: 20, fontWeight: 800 }}>{u.computedPoints.toFixed(2)}</div>
@@ -636,7 +645,11 @@ function App() {
           </div>
 
           {leaderboard.slice(3).map((u, i) => (
-            <div key={u.username} style={{ ...styles.card, display: "flex", alignItems: "center", gap: 14, padding: "14px 20px" }}>
+            <div 
+              key={u.username} 
+              style={{ ...styles.card, ...styles.clickableCard, display: "flex", alignItems: "center", gap: 14, padding: "14px 20px" }}
+              onClick={() => setSelectedInspectUser(u)}
+            >
               <div style={{ width: 28, textAlign: "center", fontWeight: 700, color: "rgba(232,234,240,0.3)" }}>#{i+4}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</div>
@@ -648,6 +661,78 @@ function App() {
               <div style={{ fontWeight: 800, fontSize: 18 }}>{u.computedPoints.toFixed(2)}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* INSPECT USER MODAL OVERLAY */}
+      {selectedInspectUser && (
+        <div style={styles.modalOverlay} onClick={() => setSelectedInspectUser(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 12, marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 22, color: "#f5c842", fontWeight: 800 }}>👤 {selectedInspectUser.username}'s Profile</h3>
+              <button style={{ ...styles.btn("ghost"), padding: "4px 10px", fontSize: 18 }} onClick={() => setSelectedInspectUser(null)}>✕</button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20, background: "rgba(255,255,255,0.03)", padding: 14, borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ fontSize: 14 }}><strong style={{ color: "rgba(232,234,240,0.5)" }}>❤️ Favorite Fan Team:</strong> {selectedInspectUser.favoriteTeam ? `${flagEmoji(selectedInspectUser.favoriteTeam)} ${selectedInspectUser.favoriteTeam}` : "Not declared"}</div>
+              <div style={{ fontSize: 14 }}>
+                <strong style={{ color: "rgba(232,234,240,0.5)" }}>🏆 Predicted Champion:</strong> {
+                  kickoffCountdown === "Tournament Started" || selectedInspectUser.isPickLocked || selectedInspectUser.username === currentUser?.username ? (
+                    selectedInspectUser.tournamentWinnerPick ? `${flagEmoji(selectedInspectUser.tournamentWinnerPick)} ${selectedInspectUser.tournamentWinnerPick}` : "None"
+                  ) : (
+                    "🙈 Hidden until lockout"
+                  )
+                } {selectedInspectUser.isPickLocked && "🔒"}
+              </div>
+              <div style={{ fontSize: 14 }}><strong style={{ color: "rgba(232,234,240,0.5)" }}>📊 Total Calculated Score:</strong> <span style={{ color: "#f5c842", fontWeight: 700 }}>{selectedInspectUser.computedPoints?.toFixed(2) || "0.00"} pts</span></div>
+            </div>
+
+            <h4 style={{ margin: "0 0 10px 0", fontSize: 15, fontWeight: 700 }}>📋 Match slips & historical choices</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {matches.length === 0 ? (
+                <p style={{ fontSize: 13, color: "rgba(232,234,240,0.4)" }}>No fixtures configured in engine.</p>
+              ) : (
+                matches.map(m => {
+                  const hasStarted = isLocked(m);
+                  const registeredPick = selectedInspectUser.picks?.[m.id];
+                  const isOwnProfile = selectedInspectUser.username === currentUser?.username;
+
+                  // Privacy safe shield rule check
+                  let visualPickDisplay = "➖ No Pick";
+                  if (registeredPick) {
+                    if (hasStarted || isOwnProfile) {
+                      visualPickDisplay = `Picked [${registeredPick}]`;
+                    } else {
+                      visualPickDisplay = "🔒 Secret Slips";
+                    }
+                  }
+
+                  let badgeStatus = "default";
+                  if (m.result && registeredPick) {
+                    badgeStatus = registeredPick === m.result ? "green" : "danger";
+                  }
+
+                  return (
+                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.01)", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ fontSize: 13 }}>
+                        <div style={{ fontWeight: 600 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                        <div style={{ fontSize: 11, color: "rgba(232,234,240,0.3)" }}>{m.match_date} {m.result && `(Result: ${m.result})`}</div>
+                      </div>
+                      <div>
+                        <span style={{ 
+                          ...styles.badge(badgeStatus === "green" ? "green" : ""), 
+                          background: badgeStatus === "green" ? "rgba(76,175,80,0.15)" : badgeStatus === "danger" ? "rgba(226,75,75,0.15)" : "rgba(255,255,255,0.06)",
+                          color: badgeStatus === "green" ? "#4caf50" : badgeStatus === "danger" ? "#e24b4b" : "rgba(232,234,240,0.5)"
+                        }}>
+                          {visualPickDisplay}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       )}
 
