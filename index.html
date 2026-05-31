@@ -2,73 +2,693 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Pariuri World Cup 2026</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%86%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root {
-    --bg-dark: #0a0e1a;
-    --card-bg: #13192e;
-    --accent-gold: #f5c842;
-    --text-primary: #e8eaf0;
-    --text-secondary: rgba(232,234,240,0.5);
-    --green-win: #4caf50;
-    --red-loss: #e24b4b;
-    --blue-draw: #2196f3;
-  }
-  html, body, #root { margin: 0; padding: 0; min-height: 100vh; background: var(--bg-dark); color: var(--text-primary); }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 76px; }
-  * { box-sizing: border-box; }
-  input, select, button { font-family: inherit; }
+:root {
+  --pitch: #0b1e12;
+  --pitch-mid: #112518;
+  --pitch-light: #163020;
+  --gold: #f0b429;
+  --gold-light: #ffd166;
+  --gold-dim: rgba(240,180,41,0.15);
+  --red: #e63946;
+  --green: #52c41a;
+  --blue: #4895ef;
+  --white: #f0f4f0;
+  --muted: rgba(240,244,240,0.45);
+  --card: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.07);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body: 'Barlow', sans-serif;
+}
 
-  #loader {
-    position: fixed; inset: 0; background: var(--bg-dark); color: var(--accent-gold);
-    display: flex; align-items: center; justify-content: center; flex-direction: column;
-    gap: 14px; font-weight: 700; font-size: 16px; z-index: 9999;
-    transition: opacity 0.3s ease;
-  }
-  #loader.hidden { opacity: 0; pointer-events: none; }
-  .spinner {
-    width: 42px; height: 42px; border: 4px solid rgba(245,200,66,0.15);
-    border-top-color: var(--accent-gold); border-radius: 50%;
-    animation: spin 0.75s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .bottom-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
-    background: rgba(13, 20, 38, 0.96); backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255,255,255,0.08); display: flex;
-    justify-content: space-around; align-items: center; z-index: 900;
-  }
-  .bottom-nav-btn {
-    background: transparent; border: none; color: var(--text-secondary);
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    font-size: 11px; font-weight: 500; cursor: pointer; flex: 1; height: 100%; justify-content: center;
-    transition: color 0.2s;
-  }
-  .bottom-nav-btn.active { color: var(--accent-gold); font-weight: 700; }
-  .bottom-nav-icon { font-size: 20px; }
+html {
+  background: var(--pitch);
+  min-height: 100%;
+}
 
-  .container { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
-  .card-styled { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 18px 20px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
-  .input-styled { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #fff; padding: 11px 14px; font-size: 14px; width: 100%; outline: none; }
-  .btn-styled { border: none; border-radius: 10px; padding: 11px 22px; font-weight: 700; font-size: 14px; cursor: pointer; transition: transform 0.1s; }
-  .btn-styled:active { transform: scale(0.98); }
+body {
+  font-family: var(--font-body);
+  color: var(--white);
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(20,70,30,0.9) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 40% at 80% 110%, rgba(10,40,20,0.6) 0%, transparent 60%),
+    var(--pitch);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  overflow-x: hidden;
+}
 
-  .pct-bar-wrapper { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 10px; background: rgba(255,255,255,0.05); }
-  .pct-segment { height: 100%; transition: width 0.3s ease; }
+/* Grass line texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0px,
+    transparent 38px,
+    rgba(255,255,255,0.012) 38px,
+    rgba(255,255,255,0.012) 40px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root { position: relative; z-index: 1; }
+
+input, select, button, textarea { font-family: var(--font-body); }
+
+/* LOADER */
+#loader {
+  position: fixed; inset: 0;
+  background: var(--pitch);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; z-index: 9999;
+  transition: opacity 0.4s ease;
+}
+#loader.hidden { opacity: 0; pointer-events: none; }
+.loader-ball {
+  width: 52px; height: 52px;
+  background: radial-gradient(circle at 35% 35%, #fff 0%, #bbb 40%, #555 100%);
+  border-radius: 50%;
+  animation: bounce 0.7s ease-in-out infinite alternate;
+  box-shadow: 0 0 30px rgba(240,180,41,0.3);
+}
+@keyframes bounce {
+  from { transform: translateY(-14px) rotate(-10deg); }
+  to   { transform: translateY(8px) rotate(10deg); box-shadow: 0 20px 30px rgba(0,0,0,0.5); }
+}
+.loader-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+/* NAV */
+.topnav {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  height: 58px;
+  background: rgba(11,30,18,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(240,180,41,0.15);
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-logo span { color: var(--white); }
+.nav-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-user {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: calc(62px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(9,24,14,0.97);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(240,180,41,0.12);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 900;
+}
+.nav-btn {
+  background: transparent; border: none;
+  color: var(--muted);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; font-size: 10px; font-weight: 600;
+  cursor: pointer; flex: 1; height: 62px;
+  justify-content: center;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  position: relative;
+}
+.nav-btn.active { color: var(--gold); }
+.nav-btn.active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 28px; height: 2px;
+  background: var(--gold);
+  border-radius: 0 0 3px 3px;
+}
+.nav-btn-icon { font-size: 22px; line-height: 1; }
+
+/* LAYOUT */
+.page-body { padding-bottom: 80px; }
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+/* CARDS */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.card-gold {
+  background: linear-gradient(135deg, rgba(240,180,41,0.08) 0%, rgba(11,30,18,0.8) 100%);
+  border-color: rgba(240,180,41,0.25);
+}
+.card-pitch {
+  background: linear-gradient(135deg, rgba(22,48,32,0.9) 0%, rgba(11,30,18,0.95) 100%);
+  border-color: rgba(255,255,255,0.06);
+}
+
+/* INPUTS */
+.input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  padding: 12px 14px;
+  font-size: 15px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.input:focus { border-color: rgba(240,180,41,0.5); }
+.input::placeholder { color: var(--muted); }
+.input option { background: #0b1e12; }
+
+/* BUTTONS */
+.btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 13px 24px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn:active { transform: scale(0.97); }
+.btn-gold { background: linear-gradient(135deg, #f0b429, #e09a10); color: #0b1e12; }
+.btn-gold:hover { background: linear-gradient(135deg, #ffd166, #f0b429); }
+.btn-danger { background: rgba(230,57,70,0.15); color: var(--red); border: 1px solid rgba(230,57,70,0.3); }
+.btn-danger:hover { background: rgba(230,57,70,0.25); }
+.btn-green { background: rgba(82,196,26,0.15); color: var(--green); border: 1px solid rgba(82,196,26,0.3); }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+.btn-block { width: 100%; }
+
+/* BADGES */
+.badge {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.badge-gold { background: var(--gold-dim); color: var(--gold); }
+.badge-green { background: rgba(82,196,26,0.12); color: var(--green); }
+.badge-red { background: rgba(230,57,70,0.12); color: var(--red); }
+.badge-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+/* PICK BUTTONS */
+.pick-row { display: flex; gap: 8px; }
+.pick-btn {
+  flex: 1; border-radius: var(--radius-sm);
+  padding: 12px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  transition: all 0.15s;
+}
+.pick-btn:active { transform: scale(0.96); }
+.pick-btn-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; }
+.pick-btn-odds { font-family: var(--font-display); font-size: 18px; font-weight: 900; color: var(--white); }
+.pick-btn.selected-1 { background: rgba(82,196,26,0.15); border-color: var(--green); }
+.pick-btn.selected-1 .pick-btn-odds, .pick-btn.selected-1 .pick-btn-label { color: var(--green); }
+.pick-btn.selected-X { background: rgba(240,180,41,0.15); border-color: var(--gold); }
+.pick-btn.selected-X .pick-btn-odds, .pick-btn.selected-X .pick-btn-label { color: var(--gold); }
+.pick-btn.selected-2 { background: rgba(72,149,239,0.15); border-color: var(--blue); }
+.pick-btn.selected-2 .pick-btn-odds, .pick-btn.selected-2 .pick-btn-label { color: var(--blue); }
+
+/* DISTRIBUTION BAR */
+.dist-bar { height: 4px; border-radius: 2px; overflow: hidden; background: rgba(255,255,255,0.05); display: flex; margin-top: 10px; }
+.dist-seg { height: 100%; transition: width 0.4s ease; }
+
+/* TOAST */
+.toast {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #f0b429, #e09a10);
+  color: #0b1e12;
+  padding: 11px 22px;
+  border-radius: 30px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  z-index: 9999;
+  box-shadow: 0 8px 28px rgba(240,180,41,0.35);
+  white-space: nowrap;
+  animation: toastIn 0.3s ease;
+  pointer-events: none;
+}
+@keyframes toastIn {
+  from { opacity: 0; top: 60px; }
+  to   { opacity: 1; top: 70px; }
+}
+
+/* SECTION HEADINGS */
+.section-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+
+/* MATCH CARD */
+.match-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--muted); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+.match-teams {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 17px;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.match-team { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+.match-flag { font-size: 28px; line-height: 1; }
+.match-team-name { font-size: 13px; font-weight: 800; letter-spacing: 0.3px; }
+.match-vs {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* LEADERBOARD */
+.lb-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.lb-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(240,180,41,0.2); }
+.lb-row.gold-row { background: rgba(240,180,41,0.07); border-color: rgba(240,180,41,0.25); }
+.lb-rank-num {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 900;
+  width: 36px; text-align: center; flex-shrink: 0;
+}
+.lb-rank-num.top3 { color: var(--gold); }
+.lb-delta { font-size: 10px; font-weight: 800; text-align: center; }
+.lb-name { font-family: var(--font-display); font-size: 17px; font-weight: 800; }
+.lb-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.lb-pts { font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--gold); }
+.lb-wins { font-size: 11px; color: var(--muted); text-align: right; }
+
+/* PROFILE HEADER */
+.profile-hero {
+  background: linear-gradient(135deg, rgba(22,48,32,0.95) 0%, rgba(17,37,24,0.95) 100%);
+  border: 1px solid rgba(240,180,41,0.2);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 16px;
+}
+.profile-avatar {
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, var(--gold), #b87f10);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 900;
+  color: #0b1e12;
+  flex-shrink: 0;
+}
+.profile-name { font-family: var(--font-display); font-size: 26px; font-weight: 900; line-height: 1; }
+.profile-rank { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: var(--gold); }
+
+/* HOME / AUTH */
+.home-hero {
+  text-align: center;
+  padding: 60px 20px 40px;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--gold-dim);
+  border: 1px solid rgba(240,180,41,0.2);
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 2px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(44px, 12vw, 72px);
+  line-height: 0.9;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+}
+.hero-title .accent { color: var(--gold); }
+.hero-sub {
+  font-size: 15px;
+  color: var(--muted);
+  max-width: 380px;
+  margin: 0 auto 36px;
+  line-height: 1.55;
+}
+
+/* AUTH TABS */
+.auth-tabs {
+  display: flex;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.auth-tab {
+  flex: 1; padding: 10px;
+  background: transparent; border: none;
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer; border-radius: 6px;
+  transition: all 0.2s;
+}
+.auth-tab.active {
+  background: var(--gold-dim);
+  color: var(--gold);
+}
+
+/* GATEWAY */
+.gateway-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  padding: 80px 20px 40px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.countdown-display {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 9vw, 56px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--white);
+  background: rgba(240,180,41,0.06);
+  border: 1px solid rgba(240,180,41,0.2);
+  border-radius: var(--radius);
+  padding: 20px 28px;
+  width: 100%;
+  margin: 16px 0 32px;
+}
+
+/* ADMIN */
+.admin-tabs {
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,0.03);
+  padding: 4px; border-radius: var(--radius-sm);
+  margin-bottom: 20px; overflow-x: auto;
+}
+.admin-tab {
+  flex: 1; min-width: 68px; padding: 9px 6px;
+  background: transparent; border: none;
+  font-family: var(--font-display);
+  font-size: 12px; font-weight: 800; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--muted);
+  cursor: pointer; border-radius: 6px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.admin-tab.active { background: var(--gold); color: #0b1e12; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  padding: 0;
+}
+@media (min-width: 500px) {
+  .modal-overlay { align-items: center; padding: 20px; }
+}
+.modal-content {
+  background: #0d1f14;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 24px 20px;
+}
+@media (min-width: 500px) {
+  .modal-content {
+    border-radius: var(--radius);
+    max-width: 520px;
+  }
+}
+.modal-handle {
+  width: 36px; height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+@media (min-width: 500px) { .modal-handle { display: none; } }
+
+/* RESULT HISTORY */
+.history-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  border-left-width: 3px;
+}
+.history-row.win { border-left-color: var(--green); }
+.history-row.loss { border-left-color: var(--red); }
+.history-row.neutral { border-left-color: rgba(255,255,255,0.08); }
+
+/* MVP BANNER */
+.mvp-banner {
+  background: linear-gradient(135deg, #1a2d12 0%, #3a3010 100%);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  text-align: center;
+  margin-bottom: 16px;
+  position: relative; overflow: hidden;
+}
+.mvp-banner::before {
+  content: '⭐';
+  position: absolute; font-size: 80px;
+  opacity: 0.06; top: -10px; right: -10px;
+}
+
+/* RESULT PILL */
+.result-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(82,196,26,0.12);
+  border: 1px solid rgba(82,196,26,0.25);
+  color: var(--green);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--font-display);
+  font-size: 12px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* CHAMPION CARD */
+.champion-card {
+  background: linear-gradient(135deg, rgba(17,37,24,0.95) 0%, rgba(22,48,32,0.95) 100%);
+  border: 1px solid rgba(240,180,41,0.3);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+
+/* GRID HELPERS */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.flex-col { display: flex; flex-direction: column; gap: 12px; }
+.flex-row { display: flex; align-items: center; gap: 10px; }
+
+/* DIVIDER */
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 16px 0;
+}
+
+/* SCORE TAG on locked matches */
+.score-tag {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 800;
+  background: rgba(255,255,255,0.06);
+  padding: 3px 10px; border-radius: 20px;
+  color: var(--muted);
+}
+
+/* ODDS STRIP on matchday cards */
+.odds-strip {
+  display: flex; gap: 6px; margin-top: 12px;
+}
+
+/* ADMIN MATCH ROW */
+.admin-match-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(240,180,41,0.2); border-radius: 3px; }
+
+/* RESPONSIVE */
+@media (min-width: 600px) {
+  .page-body { padding-bottom: 40px; }
+  .bottom-nav { display: none; }
+  .topnav-desktop-tabs { display: flex !important; }
+}
+.topnav-desktop-tabs { display: none; }
+.desktop-tab {
+  background: transparent; border: none;
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer; padding: 8px 14px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.desktop-tab.active { color: var(--gold); background: var(--gold-dim); }
+
+/* LIVE badge */
+.live-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(230,57,70,0.15);
+  border: 1px solid rgba(230,57,70,0.3);
+  color: var(--red);
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 1px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.live-dot {
+  width: 6px; height: 6px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: pulse 1s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* Error text */
+.error-text { color: var(--red); font-size: 13px; font-weight: 600; margin-top: 4px; }
+
+/* Champion odds badge in select */
+select option { background: #0b1e12; }
 </style>
 </head>
 <body>
 
 <div id="loader">
-  <div class="spinner"></div>
-  <div style="letter-spacing: 0.5px; margin-top: 12px;">⚽ ESTABLISHING ARENA SERVER...</div>
+  <div class="loader-ball"></div>
+  <div class="loader-text">Loading Arena...</div>
 </div>
 
 <div id="root"></div>
@@ -76,58 +696,49 @@
 <script type="text/babel">
 const { useState, useEffect, useMemo } = React;
 
-// CONFIGURATION PARAMETERS (Swap with your Supabase endpoint values)
 const SUPABASE_URL = "https://mfvwumillzpofmvjibkp.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_QUjFKlHhgcIgisSV-SESdg_49GIA0c0";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const API_FOOTBALL_KEY = "YOUR_API_FOOTBALL_KEY_HERE"; 
-const API_LEAGUE_ID = 1; 
+const API_FOOTBALL_KEY = "YOUR_API_FOOTBALL_KEY_HERE";
+const API_LEAGUE_ID = 1;
 const API_SEASON = 2026;
 
 const TEAMS = [
-  "United States", "Canada", "Mexico", "Argentina", "Brazil", "Colombia", "Ecuador", "Paraguay", "Uruguay",
-  "England", "France", "Croatia", "Norway", "Portugal", "Germany", "Netherlands", "Austria", "Belgium",
-  "Scotland", "Spain", "Switzerland", "Sweden", "Türkiye", "Bosnia and Herzegovina", "Czechia",
-  "Algeria", "Cabo Verde", "Côte d'Ivoire", "Egypt", "Ghana", "Morocco", "Senegal", "South Africa", "Tunisia", "DR Congo",
-  "Australia", "Iran", "Japan", "Jordan", "South Korea", "Qatar", "Saudi Arabia", "Uzbekistan", "Iraq",
-  "Curaçao", "Haiti", "Panama", "New Zealand"
+  "United States","Canada","Mexico","Argentina","Brazil","Colombia","Ecuador","Paraguay","Uruguay",
+  "England","France","Croatia","Norway","Portugal","Germany","Netherlands","Austria","Belgium",
+  "Scotland","Spain","Switzerland","Sweden","Türkiye","Bosnia and Herzegovina","Czechia",
+  "Algeria","Cabo Verde","Côte d'Ivoire","Egypt","Ghana","Morocco","Senegal","South Africa","Tunisia","DR Congo",
+  "Australia","Iran","Japan","Jordan","South Korea","Qatar","Saudi Arabia","Uzbekistan","Iraq",
+  "Curaçao","Haiti","Panama","New Zealand"
 ].sort();
 
 const WORLD_CUP_KICKOFF = new Date("2026-06-11T20:00:00Z");
 
-const styles = {
-  nav: { background: "rgba(10,14,26,0.92)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 16px", display: "flex", alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 100 },
-  logo: { fontWeight: 900, fontSize: 18, color: "var(--accent-gold)", letterSpacing: "-0.5px" },
-  badge: (v) => ({ background: v === "gold" ? "rgba(245,200,66,0.15)" : v === "green" ? "rgba(76,175,80,0.15)" : v === "danger" ? "rgba(226,75,75,0.15)" : "rgba(255,255,255,0.08)", color: v === "gold" ? "var(--accent-gold)" : v === "green" ? "var(--green-win)" : v === "danger" ? "var(--red-loss)" : "var(--text-secondary)", borderRadius: 6, padding: "3px 9px", fontSize: 11, fontWeight: 700 }),
-  pickBtn: (selected, type) => {
-    const colorMap = { "1": "var(--green-win)", "X": "var(--accent-gold)", "2": "var(--blue-draw)" };
-    return { background: selected ? colorMap[type] : "rgba(255,255,255,0.05)", color: selected ? "#0a0e1a" : "#fff", border: `1.5px solid ${selected ? colorMap[type] : "rgba(255,255,255,0.1)"}`, borderRadius: 10, padding: "10px", flex: 1, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 };
-  },
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20, backdropFilter: "blur(6px)" },
-  modalContent: { background: "#0e1324", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, maxWidth: 500, width: "100%", padding: 24, maxHeight: "80vh", overflowY: "auto" }
-};
-
 const flagEmoji = (team) => {
   if (!team || typeof team !== 'string') return "🏳️";
   const flags = {
-    "United States":"🇺🇸","Canada":"🇨🇦","Mexico":"🇲🇽","Argentina":"🇦🇷","Brazil":"🇧🇷","Colombia":"🇨🇴","Ecuador":"🇪🇨","Paraguay":"🇵🇾","Uruguay":"🇺🇾",
-    "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","France":"🇫🇷","Croatia":"🇭🇷","Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
-    "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷","Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿",
-    "Algeria":"🇩🇿","Cabo Verde":"🇨🇻","Côte d'Ivoire":"🇨🇮","Egypt":"🇪🇬","Ghana":"🇬🇭","Morocco":"🇲🇦","Senegal":"🇸🇳","South Africa":"🇿🇦","Tunisia":"🇹🇳","DR Congo":"🇨🇩",
-    "Australia":"🇦🇺","Iran":"🇮🇷","Japan":"🇯🇵","Jordan":"🇯🇴","South Korea":"🇰🇷","Qatar":"🇶🇦","Saudi Arabia":"🇸🇦","Uzbekistan":"🇺🇿","Iraq":"🇮🇶",
-    "Curaçao":"🇨🇼","Haiti":"🇭🇹","Panama":"🇵🇦","New Zealand":"🇳🇿"
+    "United States":"🇺🇸","Canada":"🇨🇦","Mexico":"🇲🇽","Argentina":"🇦🇷","Brazil":"🇧🇷","Colombia":"🇨🇴",
+    "Ecuador":"🇪🇨","Paraguay":"🇵🇾","Uruguay":"🇺🇾","England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","France":"🇫🇷","Croatia":"🇭🇷",
+    "Norway":"🇳🇴","Portugal":"🇵🇹","Germany":"🇩🇪","Netherlands":"🇳🇱","Austria":"🇦🇹","Belgium":"🇧🇪",
+    "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Spain":"🇪🇸","Switzerland":"🇨🇭","Sweden":"🇸🇪","Türkiye":"🇹🇷",
+    "Bosnia and Herzegovina":"🇧🇦","Czechia":"🇨🇿","Algeria":"🇩🇿","Cabo Verde":"🇨🇻",
+    "Côte d'Ivoire":"🇨🇮","Egypt":"🇪🇬","Ghana":"🇬🇭","Morocco":"🇲🇦","Senegal":"🇸🇳",
+    "South Africa":"🇿🇦","Tunisia":"🇹🇳","DR Congo":"🇨🇩","Australia":"🇦🇺","Iran":"🇮🇷",
+    "Japan":"🇯🇵","Jordan":"🇯🇴","South Korea":"🇰🇷","Qatar":"🇶🇦","Saudi Arabia":"🇸🇦",
+    "Uzbekistan":"🇺🇿","Iraq":"🇮🇶","Curaçao":"🇨🇼","Haiti":"🇭🇹","Panama":"🇵🇦","New Zealand":"🇳🇿"
   };
   return flags[team] || "🏴‍☠️";
 };
 
 function App() {
-  const [session, setSession] = useState(() => JSON.parse(localStorage.getItem("pariuri_session")));
+  const [session, setSession] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("pariuri_session")); } catch { return null; }
+  });
   const [users, setUsers] = useState({});
   const [matches, setMatches] = useState([]);
   const [tournamentConfig, setTournamentConfig] = useState({ tournament_name: "World Cup 2026", tournament_winner: null, champion_odds: {} });
-
-  const [page, setPage] = useState("home"); 
+  const [page, setPage] = useState("home");
   const [authMode, setAuthMode] = useState("login");
   const [form, setForm] = useState({ username: "", password: "", favoriteTeam: "" });
   const [error, setError] = useState("");
@@ -135,28 +746,22 @@ function App() {
   const [adminTab, setAdminTab] = useState("matches");
   const [inspectUser, setInspectUser] = useState(null);
   const [inspectMatchBets, setInspectMatchBets] = useState(null);
-
   const [globalTimer, setGlobalTimer] = useState("");
   const [isTournamentBegun, setIsTournamentBegun] = useState(false);
-
   const [matchForm, setMatchForm] = useState({ team1: "", team2: "", date: "", time: "21:00", odds1: "", oddsX: "", odds2: "", stage: "", apiFixtureId: "" });
 
   async function fetchAllData() {
     try {
       const { data: m } = await supabaseClient.from('matches').select('*');
       if (m) setMatches(m);
-
       const { data: p } = await supabaseClient.from('profiles').select('*');
       if (p) {
         const mapped = {};
         p.forEach(u => {
           if (u.username) {
             mapped[u.username.toLowerCase().trim()] = {
-              id: u.id,
-              username: String(u.username),
-              password: String(u.password),
-              isAdmin: u.is_admin || false,
-              favoriteTeam: u.favorite_team ? String(u.favorite_team) : "",
+              id: u.id, username: String(u.username), password: String(u.password),
+              isAdmin: u.is_admin || false, favoriteTeam: u.favorite_team ? String(u.favorite_team) : "",
               tournamentWinnerPick: u.tournament_winner_pick ? String(u.tournament_winner_pick) : null,
               isPickLocked: u.is_pick_locked || false,
               picks: u.picks && typeof u.picks === 'object' ? u.picks : {},
@@ -166,22 +771,15 @@ function App() {
         });
         setUsers(mapped);
       }
-
       const { data: cfg } = await supabaseClient.from('tournament_config').select('*').eq('id', 1).maybeSingle();
-      if (cfg) {
-        setTournamentConfig({
-          tournament_name: cfg.tournament_name || "World Cup 2026",
-          tournament_winner: cfg.tournament_winner || null,
-          champion_odds: cfg.champion_odds || {}
-        });
-      }
-    } catch (ex) { console.error("Database connection failure:", ex); }
+      if (cfg) setTournamentConfig({ tournament_name: cfg.tournament_name || "World Cup 2026", tournament_winner: cfg.tournament_winner || null, champion_odds: cfg.champion_odds || {} });
+    } catch (ex) { console.error(ex); }
   }
 
   useEffect(() => {
     fetchAllData().then(() => {
-      const element = document.getElementById("loader");
-      if (element) element.classList.add("hidden");
+      const el = document.getElementById("loader");
+      if (el) el.classList.add("hidden");
     });
     const interval = setInterval(fetchAllData, 20000);
     return () => clearInterval(interval);
@@ -191,15 +789,10 @@ function App() {
     if (session) {
       localStorage.setItem("pariuri_session", JSON.stringify(session));
       const targetUser = users[session.username.toLowerCase()];
-      if (targetUser?.isAdmin) {
-        setPage("admin");
-      } else if (page === "home") {
+      if (targetUser?.isAdmin) { setPage("admin"); }
+      else if (page === "home") {
         const timeRemaining = WORLD_CUP_KICKOFF - new Date();
-        if (timeRemaining > 0) {
-          setPage("gateway");
-        } else {
-          setPage("profile");
-        }
+        setPage(timeRemaining > 0 ? "gateway" : "profile");
       }
     } else {
       localStorage.removeItem("pariuri_session");
@@ -209,103 +802,77 @@ function App() {
   useEffect(() => {
     function computeTimer() {
       const remaining = WORLD_CUP_KICKOFF - new Date();
-      if (remaining <= 0) {
-        setIsTournamentBegun(true);
-        setGlobalTimer("TOURNAMENT LIVE");
-      } else {
-        const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-        setGlobalTimer(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-      }
+      if (remaining <= 0) { setIsTournamentBegun(true); setGlobalTimer("AO VIU"); return; }
+      const days = Math.floor(remaining / 86400000);
+      const hours = Math.floor((remaining % 86400000) / 3600000);
+      const minutes = Math.floor((remaining % 3600000) / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      setGlobalTimer(`${days}z ${hours}h ${minutes}m ${seconds}s`);
     }
     computeTimer();
-    const subId = setInterval(computeTimer, 1000);
-    return () => clearInterval(subId);
+    const id = setInterval(computeTimer, 1000);
+    return () => clearInterval(id);
   }, []);
 
-  function triggerToast(m) { setToast(m); setTimeout(() => setToast(""), 2500); }
+  function triggerToast(msg) { setToast(msg); setTimeout(() => setToast(""), 2800); }
 
   const currentUser = (session && users[session.username.toLowerCase()]) ? users[session.username.toLowerCase()] : null;
 
   const sortedLeaderboard = useMemo(() => {
-    const list = Object.values(users)
-      .filter(u => !u.isAdmin)
-      .map(u => {
-        let pts = 0;
-        let correctWins = 0;
-        matches.forEach(m => {
-          if (m.result && u.picks && u.picks[m.id] === m.result) {
-            correctWins++;
-            const field = m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2;
-            pts += parseFloat(field) || 0;
-          }
-        });
-        if (tournamentConfig.tournament_winner && u.tournamentWinnerPick === tournamentConfig.tournament_winner) {
-          pts += parseFloat(tournamentConfig.champion_odds[tournamentConfig.tournament_winner]) || 0;
+    return Object.values(users).filter(u => !u.isAdmin).map(u => {
+      let pts = 0, correctWins = 0;
+      matches.forEach(m => {
+        if (m.result && u.picks && u.picks[m.id] === m.result) {
+          correctWins++;
+          pts += parseFloat(m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2) || 0;
         }
-        return { ...u, totalPoints: Math.round(pts * 100) / 100, correctWins };
       });
-
-    return list.sort((a, b) => b.totalPoints - a.totalPoints || b.correctWins - a.correctWins);
+      if (tournamentConfig.tournament_winner && u.tournamentWinnerPick === tournamentConfig.tournament_winner)
+        pts += parseFloat(tournamentConfig.champion_odds[tournamentConfig.tournament_winner]) || 0;
+      return { ...u, totalPoints: Math.round(pts * 100) / 100, correctWins };
+    }).sort((a, b) => b.totalPoints - a.totalPoints || b.correctWins - a.correctWins);
   }, [users, matches, tournamentConfig]);
 
   const matchdayMvpNode = useMemo(() => {
-    const historicalMatchdays = [...new Set(matches.filter(m => m.result).map(m => parseInt(m.matchday) || 1))];
-    if (!historicalMatchdays.length) return null;
-    const latestMD = Math.max(...historicalMatchdays);
-
+    const mds = [...new Set(matches.filter(m => m.result).map(m => parseInt(m.matchday) || 1))];
+    if (!mds.length) return null;
+    const latestMD = Math.max(...mds);
     const scores = Object.values(users).filter(u => !u.isAdmin).map(u => {
-      let mdWins = 0;
-      let mdPts = 0;
+      let mdWins = 0, mdPts = 0;
       matches.filter(m => parseInt(m.matchday) === latestMD && m.result).forEach(m => {
         if (u.picks?.[m.id] === m.result) {
           mdWins++;
-          const field = m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2;
-          mdPts += parseFloat(field) || 0;
+          mdPts += parseFloat(m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2) || 0;
         }
       });
       return { username: u.username, mdWins, mdPts };
     }).sort((a, b) => b.mdWins - a.mdWins || b.mdPts - a.mdPts);
-
     return (scores[0] && scores[0].mdWins > 0) ? { matchday: latestMD, username: scores[0].username, wins: scores[0].mdWins } : null;
   }, [users, matches]);
 
   function runLogin() {
-    if (!form.username || !form.password) { setError("Fill all fields"); return; }
+    if (!form.username || !form.password) { setError("Completați toate câmpurile"); return; }
     const target = users[form.username.trim().toLowerCase()];
-    if (!target || target.password !== form.password) { setError("Invalid parameters provided"); return; }
-    setError("");
-    setSession({ username: target.username });
+    if (!target || target.password !== form.password) { setError("Date invalide"); return; }
+    setError(""); setSession({ username: target.username });
   }
 
   async function runRegister() {
-    if (!form.username || !form.password || !form.favoriteTeam) { setError("Provide username, password and fan choice"); return; }
+    if (!form.username || !form.password || !form.favoriteTeam) { setError("Completați toate câmpurile"); return; }
     const normalized = form.username.trim().toLowerCase();
-    if (users[normalized]) { setError("Username exists"); return; }
-
+    if (users[normalized]) { setError("Username deja folosit"); return; }
     const isSystemAdmin = normalized === "dobrinescu" && form.password === "admin123";
     const generatedEmail = `${normalized}@pariuriwc2026.com`;
-
     const { data: authWrap, error: authErr } = await supabaseClient.auth.signUp({ email: generatedEmail, password: form.password });
     if (authErr) { setError(authErr.message); return; }
-
     if (authWrap.user) {
       const { error: profErr } = await supabaseClient.from('profiles').insert([{
-        id: authWrap.user.id,
-        username: form.username.trim(),
-        password: form.password,
-        is_admin: isSystemAdmin,
-        favorite_team: form.favoriteTeam,
-        tournament_winner_pick: null,
-        is_pick_locked: false,
-        picks: {},
-        previous_rank: 0
+        id: authWrap.user.id, username: form.username.trim(), password: form.password,
+        is_admin: isSystemAdmin, favorite_team: form.favoriteTeam,
+        tournament_winner_pick: null, is_pick_locked: false, picks: {}, previous_rank: 0
       }]);
       if (profErr) { setError(profErr.message); return; }
     }
-
     await fetchAllData();
     setSession({ username: form.username.trim() });
   }
@@ -313,134 +880,93 @@ function App() {
   async function submitPrediction(matchId, outcome) {
     const m = matches.find(x => x.id === matchId);
     if (!m || m.result || new Date(m.match_date + "T" + m.match_time) <= new Date()) {
-      triggerToast("🔒 Selections closed for this match.");
-      return;
+      triggerToast("🔒 Predicțiile sunt închise"); return;
     }
-    const currentPicks = currentUser.picks || {};
-    const localUpdated = { ...currentPicks, [matchId]: outcome };
-
+    const localUpdated = { ...(currentUser.picks || {}), [matchId]: outcome };
     const { error: updateErr } = await supabaseClient.from('profiles').update({ picks: localUpdated }).eq('username', currentUser.username);
-    if (updateErr) { triggerToast("❌ Cloud synchronization failed."); return; }
-
-    setUsers(prev => ({
-      ...prev,
-      [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated }
-    }));
-    triggerToast("Prediction saved! ⚽");
+    if (updateErr) { triggerToast("❌ Eroare de sincronizare"); return; }
+    setUsers(prev => ({ ...prev, [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated } }));
+    triggerToast("⚽ Predicție salvată!");
   }
 
   async function updateChampionPrediction(team) {
     if (currentUser.isPickLocked || isTournamentBegun) return;
     await supabaseClient.from('profiles').update({ tournament_winner_pick: team || null }).eq('username', currentUser.username);
-    fetchAllData();
-    triggerToast("Champion selection modified");
+    fetchAllData(); triggerToast("🏆 Campion actualizat");
   }
 
   async function lockChampionChoice() {
-    if (!currentUser.tournamentWinnerPick) { triggerToast("Select a team first"); return; }
-    if (!window.confirm("Lock selection permanently?")) return;
+    if (!currentUser.tournamentWinnerPick) { triggerToast("Selectați mai întâi o echipă"); return; }
+    if (!window.confirm("Blocați selecția definitiv?")) return;
     await supabaseClient.from('profiles').update({ is_pick_locked: true }).eq('username', currentUser.username);
-    fetchAllData();
-    triggerToast("Champion selection frozen! 🔒");
+    fetchAllData(); triggerToast("🔒 Campion blocat!");
   }
 
   function computeGlobalBetDistribution(matchId) {
     const pool = Object.values(users).filter(u => !u.isAdmin).map(u => u.picks?.[matchId]).filter(Boolean);
     if (!pool.length) return { p1: 33, pX: 34, p2: 33 };
     const c = { "1": 0, "X": 0, "2": 0 };
-    pool.forEach(val => { if (c[val] !== undefined) c[val]++; });
+    pool.forEach(v => { if (c[v] !== undefined) c[v]++; });
     const tot = pool.length;
-    return {
-      p1: Math.round((c["1"] / tot) * 100),
-      pX: Math.round((c["X"] / tot) * 100),
-      p2: Math.round((c["2"] / tot) * 100)
-    };
+    return { p1: Math.round((c["1"]/tot)*100), pX: Math.round((c["X"]/tot)*100), p2: Math.round((c["2"]/tot)*100) };
   }
 
   async function adminFetchLiveResults() {
-    if (API_FOOTBALL_KEY === "YOUR_API_FOOTBALL_KEY_HERE") {
-      alert("Please provision a valid production API_FOOTBALL_KEY parameter inside the script header.");
-      return;
-    }
-    triggerToast("🔄 Contacting API-Football servers...");
+    if (API_FOOTBALL_KEY === "YOUR_API_FOOTBALL_KEY_HERE") { alert("Adaugați cheia API_FOOTBALL_KEY"); return; }
+    triggerToast("🔄 Contactare API-Football...");
     try {
-      const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${API_LEAGUE_ID}&season=${API_SEASON}`, {
-        method: "GET",
-        headers: { "x-apisports-key": API_FOOTBALL_KEY }
-      });
+      const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${API_LEAGUE_ID}&season=${API_SEASON}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } });
       const data = await res.json();
-      if (!data.response || !data.response.length) { alert("Empty payload received from football statistics cluster."); return; }
-
-      let synchronizedCount = 0;
+      if (!data.response?.length) { alert("Niciun răspuns primit"); return; }
+      let count = 0;
       for (const item of data.response) {
         const fixId = item.fixture.id.toString();
-        const apiStatus = item.fixture.status.short; 
-        
-        const targetLocalMatch = matches.find(x => x.api_fixture_id === fixId);
-        if (targetLocalMatch && !targetLocalMatch.result) {
-          if (["FT", "AET", "PEN"].includes(apiStatus)) {
-            let finalOutcome = "X";
-            const hGoals = item.goals.home;
-            const aGoals = item.goals.away;
-            if (hGoals > aGoals) finalOutcome = "1";
-            else if (aGoals > hGoals) finalOutcome = "2";
-
-            await commitMatchResultWithRankSnapshot(targetLocalMatch.id, finalOutcome);
-            synchronizedCount++;
-          }
+        const status = item.fixture.status.short;
+        const local = matches.find(x => x.api_fixture_id === fixId);
+        if (local && !local.result && ["FT","AET","PEN"].includes(status)) {
+          const h = item.goals.home, a = item.goals.away;
+          await commitMatchResultWithRankSnapshot(local.id, h > a ? "1" : a > h ? "2" : "X");
+          count++;
         }
       }
-      await fetchAllData();
-      alert(`Automated synchronization complete. Finalized ${synchronizedCount} games.`);
-    } catch (err) { alert(`Pipeline exception: ${err.message}`); }
+      await fetchAllData(); alert(`Sincronizare completă: ${count} meciuri finalizate.`);
+    } catch (err) { alert(`Eroare: ${err.message}`); }
   }
 
-  async function commitMatchResultWithRankSnapshot(matchId, finalOutcome) {
-    for (let index = 0; index < sortedLeaderboard.length; index++) {
-      const u = sortedLeaderboard[index];
-      await supabaseClient.from('profiles').update({ previous_rank: index + 1 }).eq('username', u.username);
-    }
-    await supabaseClient.from('matches').update({ result: finalOutcome }).eq('id', matchId);
+  async function commitMatchResultWithRankSnapshot(matchId, outcome) {
+    for (let i = 0; i < sortedLeaderboard.length; i++)
+      await supabaseClient.from('profiles').update({ previous_rank: i + 1 }).eq('username', sortedLeaderboard[i].username);
+    await supabaseClient.from('matches').update({ result: outcome }).eq('id', matchId);
   }
 
   async function adminCreateMatch() {
-    if (!matchForm.team1 || !matchForm.team2 || !matchForm.date || !matchForm.odds1) { alert("Missing parameters"); return; }
-    const payload = {
+    if (!matchForm.team1 || !matchForm.team2 || !matchForm.date || !matchForm.odds1) { alert("Câmpuri lipsă"); return; }
+    await supabaseClient.from('matches').insert([{
       id: `match_${Date.now()}`, team1: matchForm.team1, team2: matchForm.team2,
       match_date: matchForm.date, match_time: matchForm.time,
       odds1: parseFloat(matchForm.odds1), oddsx: parseFloat(matchForm.oddsX || 3.0), odds2: parseFloat(matchForm.odds2),
       matchday: matchForm.stage || "1", result: null, api_fixture_id: matchForm.apiFixtureId || null
-    };
-    await supabaseClient.from('matches').insert([payload]);
+    }]);
     setMatchForm({ team1: "", team2: "", date: "", time: "21:00", odds1: "", oddsX: "", odds2: "", stage: "", apiFixtureId: "" });
-    fetchAllData();
-    triggerToast("Fixture launched!");
+    fetchAllData(); triggerToast("✅ Meci adăugat!");
   }
 
   async function adminForceResult(mid, res) {
-    if (window.confirm("Manually override game result? This resets leaderboard positions.")) {
-      await commitMatchResultWithRankSnapshot(mid, res);
-      fetchAllData();
-    }
+    if (window.confirm("Override rezultat?")) { await commitMatchResultWithRankSnapshot(mid, res); fetchAllData(); }
   }
 
   async function adminRevertResult(mid) {
     await supabaseClient.from('matches').update({ result: null }).eq('id', mid);
-    fetchAllData();
-    triggerToast("Outcome revoked.");
+    fetchAllData(); triggerToast("↩️ Rezultat anulat");
   }
 
   async function adminDeleteMatch(mid) {
-    if (window.confirm("Purge match from db?")) {
-      await supabaseClient.from('matches').delete().eq('id', mid);
-      fetchAllData();
-    }
+    if (window.confirm("Ștergeți meciul?")) { await supabaseClient.from('matches').delete().eq('id', mid); fetchAllData(); }
   }
 
   async function adminSaveWinnerConfig(winner) {
     await supabaseClient.from('tournament_config').update({ tournament_winner: winner }).eq('id', 1);
-    fetchAllData();
-    triggerToast("Global configuration patched.");
+    fetchAllData(); triggerToast("🏆 Campion setat!");
   }
 
   async function adminSetOddsConfig(team, oddsVal) {
@@ -450,181 +976,219 @@ function App() {
     setTournamentConfig(p => ({ ...p, champion_odds: copy }));
   }
 
-  const upcomingMatchesSorted = useMemo(() => {
-    return matches.filter(m => !m.result).sort((a,b) => new Date(a.match_date + "T" + a.match_time) - new Date(b.match_date + "T" + b.match_time));
-  }, [matches]);
+  const upcomingMatchesSorted = useMemo(() => matches.filter(m => !m.result).sort((a,b) => new Date(a.match_date+"T"+a.match_time) - new Date(b.match_date+"T"+b.match_time)), [matches]);
 
   const processedMatchdaySplit = useMemo(() => {
-    const futureOnly = upcomingMatchesSorted.filter(m => new Date(m.match_date + "T" + m.match_time) > new Date());
-    const unlocked = [];
-    const locked = [];
-    futureOnly.forEach(m => {
-      if (currentUser?.picks?.[m.id]) locked.push(m); else unlocked.push(m);
-    });
+    const future = upcomingMatchesSorted.filter(m => new Date(m.match_date+"T"+m.match_time) > new Date());
+    const unlocked = [], locked = [];
+    future.forEach(m => { if (currentUser?.picks?.[m.id]) locked.push(m); else unlocked.push(m); });
     return { unlocked, locked };
   }, [upcomingMatchesSorted, currentUser]);
 
+  const myRank = sortedLeaderboard.findIndex(x => x.username.toLowerCase() === currentUser?.username?.toLowerCase()) + 1;
+
+  // ─── RENDER ───────────────────────────────────────────────────────────────
+
   return (
     <div>
-      
-      {toast && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "var(--accent-gold)", color: "#0a0e1a", padding: "12px 24px", borderRadius: 12, fontWeight: 800, fontSize: 14, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>{toast}</div>}
+      {/* TOAST */}
+      {toast && <div className="toast">{toast}</div>}
 
-      <nav style={styles.nav}>
-        <div style={styles.logo}>🏆 {String(tournamentConfig.tournament_name).toUpperCase()}</div>
-        {session && (
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontSize: 12, color: "var(--accent-gold)", fontWeight: 700 }}>{String(session.username).toUpperCase()}</span>
-            <button style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", fontSize: 11, padding: "4px 8px", borderRadius: 6, cursor: "pointer" }} onClick={() => { setSession(null); setPage("home"); }}>LOGOUT</button>
+      {/* TOP NAV */}
+      <nav className="topnav">
+        <div className="nav-logo">🏆 <span>{String(tournamentConfig.tournament_name).toUpperCase()}</span></div>
+
+        {/* Desktop tab nav */}
+        {session && !currentUser?.isAdmin && (
+          <div className="topnav-desktop-tabs" style={{ marginLeft: 24, display: 'flex', gap: 4 }}>
+            {[["profile","👤 Profil"],["leaderboard","📊 Clasament"],["matchday","⚽ Meciuri"]].map(([key, label]) => (
+              <button key={key} className={`desktop-tab ${page===key?"active":""}`} onClick={() => setPage(key)}>{label}</button>
+            ))}
           </div>
         )}
+
+        <div className="nav-right">
+          {session && (
+            <>
+              <span className="nav-user">{String(session.username).toUpperCase()}</span>
+              <button className="btn-ghost" onClick={() => { setSession(null); setPage("home"); }}>Ieșire</button>
+            </>
+          )}
+        </div>
       </nav>
 
+      {/* ── HOME ── */}
       {page === "home" && (
-        <div style={{ padding: "80px 24px 40px", textAlign: "center", maxWwidth: 600, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 44, fontWeight: 900, color: "var(--accent-gold)", margin: "0 0 12px", letterSpacing: "-1.5px" }}>World Cup 2026 Arena</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: 16, margin: "0 0 40px", lineHheight: 1.5 }}>Join the premier circle of football analysts. Forecast dynamic match odds, unlock tournament badges, and secure the championship leaderboard.</p>
-          
-          <div className="card-styled" style={{ textAlign: "left", padding: 24 }}>
-            <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10, marginBbottom: 20 }}>
-              <button style={{ flex: 1, padding: "10px", background: authMode === "login" ? "rgba(245,200,66,0.15)" : "transparent", color: authMode === "login" ? "var(--accent-gold)" : "var(--text-secondary)", border: "none", border_radius: 8, cursor: "pointer", font_weight: 700 }} onClick={() => setAuthMode("login")}>Sign In</button>
-              <button style={{ flex: 1, padding: "10px", background: authMode === "register" ? "rgba(245,200,66,0.15)" : "transparent", color: authMode === "register" ? "var(--accent-gold)" : "var(--text-secondary)", border: "none", border_radius: 8, cursor: "pointer", font_weight: 700 }} onClick={() => setAuthMode("register")}>Register</button>
+        <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div className="home-hero">
+            <div className="hero-badge">⚽ Sezonul 2026</div>
+            <h1 className="hero-title">PARIURI<br/><span className="accent">WORLD CUP</span></h1>
+            <p className="hero-sub">Prezice meciurile, câștigă puncte pe baza cotelor, și urcă în clasament.</p>
+          </div>
+
+          <div className="container" style={{ maxWidth: 440 }}>
+            <div className="card card-pitch">
+              <div className="auth-tabs">
+                <button className={`auth-tab ${authMode==="login"?"active":""}`} onClick={() => setAuthMode("login")}>Intră</button>
+                <button className={`auth-tab ${authMode==="register"?"active":""}`} onClick={() => setAuthMode("register")}>Înregistrare</button>
+              </div>
+
+              {authMode === "login" ? (
+                <div className="flex-col">
+                  <input placeholder="Nume utilizator" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
+                  <input type="password" placeholder="Parolă" className="input" onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
+                  {error && <div className="error-text">{error}</div>}
+                  <button className="btn btn-gold btn-block" onClick={runLogin}>INTRĂ ÎN ARENĂ →</button>
+                </div>
+              ) : (
+                <div className="flex-col">
+                  <input placeholder="Alege un username" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
+                  <input type="password" placeholder="Parolă" className="input" onChange={e => setForm({ ...form, password: e.target.value })} />
+                  <select className="input" onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
+                    <option value="">❤️ Echipa favorită</option>
+                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
+                  </select>
+                  {error && <div className="error-text">{error}</div>}
+                  <button className="btn btn-gold btn-block" onClick={runRegister}>CREEAZĂ CONT →</button>
+                </div>
+              )}
             </div>
-
-            {authMode === "login" ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <input placeholder="Username" className="input-styled" onChange={e => setForm({ ...form, username: e.target.value })} />
-                <input type="password" placeholder="Password" className="input-styled" onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
-                {error && <div style={{ color: "var(--red-loss)", fontSize: 13 }}>{error}</div>}
-                <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000" }} onClick={runLogin}>ENTER STADIUM</button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <input placeholder="Choose Username" className="input-styled" onChange={e => setForm({ ...form, username: e.target.value })} />
-                <input type="password" placeholder="Password" className="input-styled" onChange={e => setForm({ ...form, password: e.target.value })} />
-                <select className="input-styled" onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
-                  <option value="">Select Favorite Team ❤️</option>
-                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
-                </select>
-                {error && <div style={{ color: "var(--red-loss)", fontSize: 13 }}>{error}</div>}
-                <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000" }} onClick={runRegister}>REGISTER PROFILE</button>
-              </div>
-            )}
           </div>
         </div>
       )}
 
+      {/* ── GATEWAY ── */}
       {page === "gateway" && (
-        <div style={{ textAlign: "center", padding: "100px 24px", maxWwidth: 540, margin: "0 auto" }}>
-          <div style={{ fontSize: 64, margin_bottom: 16 }}>⏳</div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px" }}>THE ARENA LOCKS SOON</h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: 14, margin: "0 0 32px" }}>The World Cup tournament framework is initializing. Set your parameters before opening kickoff.</p>
-          
-          <div className="card-styled" style={{ background: "linear-gradient(135deg, #181d36 0%, #2a220d 100%)", padding: "24px 16px", marginBbottom: 32 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent-gold)", letterSpacing: "1px", marginBbottom: 6 }}>COUNTDOWN TO GLORY</div>
-            <div style={{ fontSize: 32, fontWeight: 900, fontFamily: "monospace", letterSpacing: "1px" }}>{globalTimer}</div>
-          </div>
-
-          <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", padding: "14px 44px", fontSize: 16, border_radius: 12, box_shadow: "0 4px 16px rgba(245,200,66,0.25)" }} onClick={() => setPage("profile")}>ENTER ARENA →</button>
+        <div className="gateway-wrap">
+          <div className="hero-badge">⚽ Turneul începe în</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, marginBottom: 0 }}>ARENA SE DESCHIDE</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>Setează-ți parametrii înainte de primul fluier.</p>
+          <div className="countdown-display">{globalTimer}</div>
+          <button className="btn btn-gold" style={{ padding: '14px 44px', fontSize: 16 }} onClick={() => setPage("profile")}>
+            INTRĂ ÎN ARENĂ →
+          </button>
         </div>
       )}
 
-      <div className="container">
-        
+      {/* ── MAIN PAGES ── */}
+      <div className="container page-body">
+
+        {/* ── PROFILE ── */}
         {page === "profile" && currentUser && (
           <div>
-            <div className="card-styled" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(to right, var(--card-bg), #1a223d)" }}>
-              <div>
-                <div style={{ textTransform: "uppercase", fontSize: 11, fontWeight: 700, color: "var(--accent-gold)", letterSpacing: "0.5px" }}>Contender Card</div>
-                <h2 style={{ margin: "2px 0 6px", fontSize: 24, fontWeight: 900 }}>{String(currentUser.username)}</h2>
-                <div style={{ display: "flex", gap: 8 }}><span style={styles.badge()}>❤️ {String(currentUser.favoriteTeam)} Fan</span></div>
+            {/* Hero Card */}
+            <div className="profile-hero">
+              <div className="profile-avatar">{String(currentUser.username)[0].toUpperCase()}</div>
+              <div style={{ flex: 1 }}>
+                <div className="section-label">Contender</div>
+                <div className="profile-name">{String(currentUser.username).toUpperCase()}</div>
+                <div style={{ marginTop: 6 }}>
+                  <span className="badge badge-gold">{flagEmoji(currentUser.favoriteTeam)} {currentUser.favoriteTeam}</span>
+                </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Rank Status</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: "var(--accent-gold)" }}>#{sortedLeaderboard.findIndex(x => x.username.toLowerCase() === currentUser.username.toLowerCase()) + 1}</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>RANG</div>
+                <div className="profile-rank">#{myRank || '—'}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                  {(sortedLeaderboard.find(x => x.username.toLowerCase() === currentUser.username.toLowerCase())?.totalPoints || 0).toFixed(2)} pts
+                </div>
               </div>
             </div>
 
-            <div className="card-styled" style={{ border: "1px solid rgba(245,200,66,0.25)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin_bottom: 12 }}>
-                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>🏆 Predicted World Cup Winner</h4>
-                {currentUser.isPickLocked && <span style={styles.badge("green")}>LOCKED 🔒</span>}
+            {/* Champion Pick */}
+            <div className="champion-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <div className="section-label">Predicție</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>🏆 Câștigător Turneu</div>
+                </div>
+                {currentUser.isPickLocked && <span className="badge badge-green">BLOCAT 🔒</span>}
               </div>
-
-              <div style={{ display: "flex", gap: 10 }}>
-                <select className="input-styled" style={{ flex: 1 }} value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
-                  <option value="">Select Champion Team...</option>
-                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} (Odds: {tournamentConfig.champion_odds[t] || "10.0"})</option>)}
+              <div className="flex-row">
+                <select className="input" style={{ flex: 1 }} value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
+                  <option value="">Selectați echipa...</option>
+                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — cotă {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
                 </select>
                 {!currentUser.isPickLocked && !isTournamentBegun && (
-                  <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", fontSize: 12, padding: "0 14px" }} onClick={lockChampionChoice}>LOCK</button>
+                  <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>BLOCHEAZĂ</button>
                 )}
               </div>
             </div>
 
-            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "24px 0 12px" }}>📊 Your Historical Slips</h3>
+            {/* Match history */}
+            <div className="section-label" style={{ marginTop: 20, marginBottom: 12 }}>Istoric Meciuri</div>
             {matches.filter(m => m.result).length === 0 ? (
-              <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: "30px 0", fontSize: 13 }}>Finalized data will appear post-match.</div>
-            ) : (
-              matches.filter(m => m.result).map(m => {
-                const choice = currentUser.picks?.[m.id];
-                const gained = choice === m.result ? (parseFloat(m[m.result === "1" ? "odds1" : m.result === "X" ? "oddsx" : "odds2"]) || 0).toFixed(2) : "0.00";
-                return (
-                  <div key={m.id} className="card-styled" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", border_left: `4px solid ${parseFloat(gained) > 0 ? "var(--green-win)" : "var(--red-loss)"}` }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                      <div style={{ fontSize: 11, color: "var(--text-secondary)", margin_top: 2 }}>Outcome: [{m.result}] · Selection: [{choice || "None"}]</div>
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '40px 0', fontSize: 14 }}>
+                Rezultatele vor apărea după meciuri.
+              </div>
+            ) : matches.filter(m => m.result).map(m => {
+              const choice = currentUser.picks?.[m.id];
+              const gained = choice === m.result ? (parseFloat(m[m.result === "1" ? "odds1" : m.result === "X" ? "oddsx" : "odds2"]) || 0).toFixed(2) : "0.00";
+              const isWin = parseFloat(gained) > 0;
+              return (
+                <div key={m.id} className={`history-row ${isWin ? "win" : choice ? "loss" : "neutral"}`}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>
+                      {flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}
                     </div>
-                    <div style={{ textAlign: "right" }}><span style={styles.badge(parseFloat(gained) > 0 ? "green" : "danger")}>+{gained} pts</span></div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                      Rezultat: [{m.result}] · Alegerea ta: [{choice || "–"}]
+                    </div>
                   </div>
-                );
-              })
-            )}
+                  <span className={`badge ${isWin ? "badge-green" : "badge-red"}`}>+{gained} pts</span>
+                </div>
+              );
+            })}
           </div>
         )}
 
+        {/* ── LEADERBOARD ── */}
         {page === "leaderboard" && (
           <div>
             {matchdayMvpNode && (
-              <div className="card-styled" style={{ background: "linear-gradient(135deg, #12192e 0%, #3a3010 100%)", border: "1px solid var(--accent-gold)", textAlign: "center", padding: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.5px" }}>🔥 MATCHDAY {matchdayMvpNode.matchday} RECORD HOLDER 🔥</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "var(--accent-gold)", margin: "4px 0" }}>{String(matchdayMvpNode.username).toUpperCase()}</div>
-                <div style={{ fontSize: 12, color: "var(--text-primary)" }}>Dominated the bracket with <strong>{matchdayMvpNode.wins}</strong> correct wins!</div>
+              <div className="mvp-banner">
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--gold)', textTransform: 'uppercase' }}>
+                  🔥 MVP Etapa {matchdayMvpNode.matchday}
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 900, color: 'var(--gold)', margin: '4px 0' }}>
+                  {String(matchdayMvpNode.username).toUpperCase()}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--white)' }}>
+                  <strong>{matchdayMvpNode.wins}</strong> predicții corecte
+                </div>
               </div>
             )}
 
-            <div style={{ marginBbottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Arena Standings</h3>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Sorted by Cumulative Odds Points → Tiebreaker: Total Prediction Wins</div>
+            <div style={{ marginBottom: 16 }}>
+              <div className="section-label">Sezon 2026</div>
+              <div className="section-title">Clasament Arena</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Puncte cumulative bazate pe cote · Egalitate: nr. victorii</div>
             </div>
 
             {sortedLeaderboard.map((u, i) => {
-              const currentRank = i + 1;
-              const prev = u.previousRank || currentRank;
-              const delta = prev - currentRank;
-              const isMVP = matchdayMvpNode && String(matchdayMvpNode.username).toLowerCase() === String(u.username).toLowerCase();
-
+              const rank = i + 1;
+              const prev = u.previousRank || rank;
+              const delta = prev - rank;
+              const isMvp = matchdayMvpNode && String(matchdayMvpNode.username).toLowerCase() === String(u.username).toLowerCase();
               return (
-                <div key={u.username} className="card-styled" style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer", border: isMVP ? "1.5px solid var(--accent-gold)" : "1px solid rgba(255,255,255,0.06)" }} onClick={() => setInspectUser(u)}>
-                  
-                  <div style={{ width: 44, textAlign: "center" }}>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: currentRank <= 3 ? "var(--accent-gold)" : "#fff" }}>#{currentRank}</div>
+                <div key={u.username} className={`lb-row ${isMvp ? "gold-row" : ""}`} onClick={() => setInspectUser(u)}>
+                  <div style={{ minWidth: 44, textAlign: 'center' }}>
+                    <div className={`lb-rank-num ${rank <= 3 ? "top3" : ""}`}>
+                      {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+                    </div>
                     {delta !== 0 && (
-                      <div style={{ fontSize: 11, fontWeight: 800, color: delta > 0 ? "var(--green-win)" : "var(--red-loss)" }}>
+                      <div className="lb-delta" style={{ color: delta > 0 ? 'var(--green)' : 'var(--red)' }}>
                         {delta > 0 ? `↑${delta}` : `↓${Math.abs(delta)}`}
                       </div>
                     )}
                   </div>
-
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
-                      {String(u.username)} {isMVP && "👑"}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{flagEmoji(u.favoriteTeam)} {String(u.favoriteTeam)} Fan</div>
+                    <div className="lb-name">{String(u.username).toUpperCase()} {isMvp && "👑"}</div>
+                    <div className="lb-sub">{flagEmoji(u.favoriteTeam)} {u.favoriteTeam}</div>
                   </div>
-
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "var(--accent-gold)" }}>{u.totalPoints.toFixed(2)}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>{u.correctWins} Wins</div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="lb-pts">{u.totalPoints.toFixed(2)}</div>
+                    <div className="lb-wins">{u.correctWins} victorii</div>
                   </div>
                 </div>
               );
@@ -632,87 +1196,103 @@ function App() {
           </div>
         )}
 
+        {/* ── MATCHDAY ── */}
         {page === "matchday" && (
           <div>
-            <div style={{ marginBbottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Timeline Forecasts</h3>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Unlocked choices remain floating at top; locked selections drop lower.</div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <div className="section-label">Preziceri</div>
+                <div className="section-title">Meciuri</div>
+              </div>
+              {isTournamentBegun && (
+                <div className="live-badge"><div className="live-dot"></div>LIVE</div>
+              )}
             </div>
 
             {processedMatchdaySplit.unlocked.length === 0 && processedMatchdaySplit.locked.length === 0 && (
-              <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: "50px 0" }}>No pending matches available on the timeline.</div>
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0', fontSize: 14 }}>
+                Niciun meci disponibil momentan.
+              </div>
             )}
 
             {processedMatchdaySplit.unlocked.map(m => {
               const distrib = computeGlobalBetDistribution(m.id);
-              const userSelection = currentUser?.picks?.[m.id];
+              const sel = currentUser?.picks?.[m.id];
               return (
-                <div key={m.id} className="card-styled" style={{ border_left: "4px solid var(--accent-gold)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-secondary)", margin_bottom: 8 }}>
-                    <span>Round {m.matchday} · {m.match_date}</span>
-                    <span style={{ fontWeight: 700, color: "var(--accent-gold)" }}>⏳ OPEN</span>
+                <div key={m.id} className="card" style={{ borderLeftColor: 'var(--gold)', borderLeftWidth: 3 }}>
+                  <div className="match-header">
+                    <span>Etapa {m.matchday} · {m.match_date}</span>
+                    <span className="badge badge-gold">⏳ DESCHIS</span>
                   </div>
-                  <div style={{ textAlign: "center", fontWeight: 800, fontSize: 16, margin_bottom: 14 }}>
-                    {flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}
-                  </div>
-                  
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={styles.pickBtn(userSelection === "1", "1")} onClick={() => submitPrediction(m.id, "1")}>
-                      <span style={{ fontSize: 10 }}>HOME</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds1}</span>
-                    </button>
-                    <button style={styles.pickBtn(userSelection === "X", "X")} onClick={() => submitPrediction(m.id, "X")}>
-                      <span style={{ fontSize: 10 }}>DRAW</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.oddsx}</span>
-                    </button>
-                    <button style={styles.pickBtn(userSelection === "2", "2")} onClick={() => submitPrediction(m.id, "2")}>
-                      <span style={{ fontSize: 10 }}>AWAY</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds2}</span>
-                    </button>
-                  </div>
-
-                  <div style={{ margin_top: 14, fontSize: 11, color: "var(--text-secondary)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>Community Bets</span>
-                      <span>1: {distrib.p1}% | X: {distrib.pX}% | 2: {distrib.p2}%</span>
+                  <div className="match-teams">
+                    <div className="match-team">
+                      <div className="match-flag">{flagEmoji(m.team1)}</div>
+                      <div className="match-team-name">{m.team1}</div>
                     </div>
-                    <div className="pct-bar-wrapper">
-                      <div className="pct-segment" style={{ width: `${distrib.p1}%`, background: "var(--green-win)" }}></div>
-                      <div className="pct-segment" style={{ width: `${distrib.pX}%`, background: "var(--accent-gold)" }}></div>
-                      <div className="pct-segment" style={{ width: `${distrib.p2}%`, background: "var(--blue-draw)" }}></div>
+                    <div className="match-vs">VS</div>
+                    <div className="match-team">
+                      <div className="match-flag">{flagEmoji(m.team2)}</div>
+                      <div className="match-team-name">{m.team2}</div>
+                    </div>
+                  </div>
+                  <div className="pick-row">
+                    {[["1","ACASĂ",m.odds1],["X","EGAL",m.oddsx],["2","OASPEȚI",m.odds2]].map(([key,label,odds]) => (
+                      <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
+                        <span className="pick-btn-label">{label}</span>
+                        <span className="pick-btn-odds">{odds}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 11, color: 'var(--muted)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span>Distribuție comunitate</span>
+                      <span style={{ fontWeight: 700 }}>1: {distrib.p1}% · X: {distrib.pX}% · 2: {distrib.p2}%</span>
+                    </div>
+                    <div className="dist-bar">
+                      <div className="dist-seg" style={{ width: `${distrib.p1}%`, background: 'var(--green)' }}></div>
+                      <div className="dist-seg" style={{ width: `${distrib.pX}%`, background: 'var(--gold)' }}></div>
+                      <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                     </div>
                   </div>
                 </div>
               );
             })}
 
+            {processedMatchdaySplit.locked.length > 0 && (
+              <div className="section-label" style={{ margin: '16px 0 10px' }}>Predicții blocate</div>
+            )}
+
             {processedMatchdaySplit.locked.map(m => {
               const distrib = computeGlobalBetDistribution(m.id);
-              const userSelection = currentUser?.picks?.[m.id];
+              const sel = currentUser?.picks?.[m.id];
               return (
-                <div key={m.id} className="card-styled" style={{ opacity: 0.8, background: "#0d1121" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-secondary)", margin_bottom: 8 }}>
-                    <span>Round {m.matchday} · {m.match_date}</span>
-                    <span style={{ fontWeight: 700, color: "var(--text-secondary)" }}>🔒 LOCKED SLIP</span>
+                <div key={m.id} className="card" style={{ opacity: 0.75 }}>
+                  <div className="match-header">
+                    <span>Etapa {m.matchday} · {m.match_date}</span>
+                    <span className="badge badge-muted">🔒 BLOCAT</span>
                   </div>
-                  <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, margin_bottom: 14, color: "var(--text-secondary)" }}>
-                    {flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}
-                  </div>
-                  
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button style={styles.pickBtn(userSelection === "1", "1")} onClick={() => submitPrediction(m.id, "1")}>
-                      <span style={{ fontSize: 10 }}>HOME</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds1}</span>
-                    </button>
-                    <button style={styles.pickBtn(userSelection === "X", "X")} onClick={() => submitPrediction(m.id, "X")}>
-                      <span style={{ fontSize: 10 }}>DRAW</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.oddsx}</span>
-                    </button>
-                    <button style={styles.pickBtn(userSelection === "2", "2")} onClick={() => submitPrediction(m.id, "2")}>
-                      <span style={{ fontSize: 10 }}>AWAY</span><span style={{ fontSize: 14, fontWeight: 900 }}>{m.odds2}</span>
-                    </button>
-                  </div>
-
-                  <div style={{ margin_top: 14, fontSize: 11, color: "var(--text-secondary)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>Community Bets</span>
-                      <span>1: {distrib.p1}% | X: {distrib.pX}% | 2: {distrib.p2}%</span>
+                  <div className="match-teams">
+                    <div className="match-team">
+                      <div className="match-flag">{flagEmoji(m.team1)}</div>
+                      <div className="match-team-name">{m.team1}</div>
                     </div>
+                    <div className="match-vs">VS</div>
+                    <div className="match-team">
+                      <div className="match-flag">{flagEmoji(m.team2)}</div>
+                      <div className="match-team-name">{m.team2}</div>
+                    </div>
+                  </div>
+                  <div className="pick-row">
+                    {[["1","ACASĂ",m.odds1],["X","EGAL",m.oddsx],["2","OASPEȚI",m.odds2]].map(([key,label,odds]) => (
+                      <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
+                        <span className="pick-btn-label">{label}</span>
+                        <span className="pick-btn-odds">{odds}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Comunitate</span>
+                    <span style={{ fontWeight: 700 }}>1: {distrib.p1}% · X: {distrib.pX}% · 2: {distrib.p2}%</span>
                   </div>
                 </div>
               );
@@ -720,40 +1300,52 @@ function App() {
           </div>
         )}
 
+        {/* ── ADMIN ── */}
         {page === "admin" && currentUser?.isAdmin && (
           <div>
-            <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10, marginBbottom: 20 }}>
-              {["matches", "results", "winner", "players"].map(t => (
-                <button key={t} style={{ flex: 1, padding: "8px", background: adminTab === t ? "var(--accent-gold)" : "transparent", color: adminTab === t ? "#000" : "#fff", border: "none", border_radius: 8, font_size: 11, font_weight: 700, cursor: "pointer" }} onClick={() => setAdminTab(t)}>{t.toUpperCase()}</button>
+            <div style={{ marginBottom: 20 }}>
+              <div className="section-label">Panou de Control</div>
+              <div className="section-title">Administrator</div>
+            </div>
+            <div className="admin-tabs">
+              {[["matches","Meciuri"],["results","Rezultate"],["winner","Câștigător"],["players","Jucători"]].map(([key,label]) => (
+                <button key={key} className={`admin-tab ${adminTab===key?"active":""}`} onClick={() => setAdminTab(key)}>{label}</button>
               ))}
             </div>
 
             {adminTab === "matches" && (
               <div>
-                <div className="card-styled">
-                  <h4 style={{ margin: "0 0 14px" }}>Schedule Launch Fixture</h4>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    <select className="input-styled" value={matchForm.team1} onChange={e=>setMatchForm({...matchForm, team1:e.target.value})}><option value="">Home Team</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
-                    <select className="input-styled" value={matchForm.team2} onChange={e=>setMatchForm({...matchForm, team2:e.target.value})}><option value="">Away Team</option>{TEAMS.map(t=><option key={t}>{t}</option>)}</select>
-                    <input type="date" className="input-styled" value={matchForm.date} onChange={e=>setMatchForm({...matchForm, date:e.target.value})} />
-                    <input type="time" className="input-styled" value={matchForm.time} onChange={e=>setMatchForm({...matchForm, time:e.target.value})} />
-                    <input type="number" step="0.01" placeholder="Odds 1" className="input-styled" value={matchForm.odds1} onChange={e=>setMatchForm({...matchForm, odds1:e.target.value})} />
-                    <input type="number" step="0.01" placeholder="Odds X" className="input-styled" value={matchForm.oddsX} onChange={e=>setMatchForm({...matchForm, oddsX:e.target.value})} />
-                    <input type="number" step="0.01" placeholder="Odds 2" className="input-styled" value={matchForm.odds2} onChange={e=>setMatchForm({...matchForm, odds2:e.target.value})} />
-                    <input placeholder="Matchday Stage Number" className="input-styled" value={matchForm.stage} onChange={e=>setMatchForm({...matchForm, stage:e.target.value})} />
+                <div className="card card-pitch">
+                  <div className="section-label" style={{ marginBottom: 14 }}>Adaugă Meci</div>
+                  <div className="grid-2">
+                    <select className="input" value={matchForm.team1} onChange={e=>setMatchForm({...matchForm,team1:e.target.value})}>
+                      <option value="">Echipa Acasă</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                    <select className="input" value={matchForm.team2} onChange={e=>setMatchForm({...matchForm,team2:e.target.value})}>
+                      <option value="">Echipa Oaspeți</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                    <input type="date" className="input" value={matchForm.date} onChange={e=>setMatchForm({...matchForm,date:e.target.value})} />
+                    <input type="time" className="input" value={matchForm.time} onChange={e=>setMatchForm({...matchForm,time:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Cotă 1" className="input" value={matchForm.odds1} onChange={e=>setMatchForm({...matchForm,odds1:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Cotă X" className="input" value={matchForm.oddsX} onChange={e=>setMatchForm({...matchForm,oddsX:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Cotă 2" className="input" value={matchForm.odds2} onChange={e=>setMatchForm({...matchForm,odds2:e.target.value})} />
+                    <input placeholder="Nr. Etapă" className="input" value={matchForm.stage} onChange={e=>setMatchForm({...matchForm,stage:e.target.value})} />
                   </div>
-                  <input placeholder="API-Football Fixture ID Link (Optional)" className="input-styled" style={{ margin_top: 10 }} value={matchForm.apiFixtureId} onChange={e=>setMatchForm({...matchForm, apiFixtureId:e.target.value})} />
-                  <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", margin_top: 14, width: "100%" }} onClick={adminCreateMatch}>PROVISION FIXTURE</button>
+                  <input placeholder="API Fixture ID (opțional)" className="input" style={{ marginTop: 10 }} value={matchForm.apiFixtureId} onChange={e=>setMatchForm({...matchForm,apiFixtureId:e.target.value})} />
+                  <button className="btn btn-gold btn-block" style={{ marginTop: 14 }} onClick={adminCreateMatch}>+ ADAUGĂ MECI</button>
                 </div>
 
-                <h4 style={{ margin: "20px 0 10px" }}>Launched Match Framework Timeline</h4>
-                {matches.sort((a,b)=> new Date(a.match_date) - new Date(b.match_date)).map(m => (
-                  <div key={m.id} className="card-styled" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="section-label" style={{ margin: '20px 0 10px' }}>Meciuri Programate</div>
+                {matches.sort((a,b) => new Date(a.match_date)-new Date(b.match_date)).map(m => (
+                  <div key={m.id} className="admin-match-row">
                     <div>
-                      <div style={{ font_size: 13, font_weight: 700 }}>{m.team1} vs {m.team2}</div>
-                      <div style={{ font_size: 11, color: "var(--text-secondary)" }}>Odds: {m.odds1} | {m.oddsx} | {m.odds2} {m.api_fixture_id && `· Connected API: ${m.api_fixture_id}`}</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        {m.match_date} · Cote: {m.odds1} / {m.oddsx} / {m.odds2}
+                        {m.api_fixture_id && ` · API: ${m.api_fixture_id}`}
+                      </div>
                     </div>
-                    <button className="btn-styled" style={{ background: "var(--red-loss)", color: "#fff", font_size: 11, padding: "5px 10px" }} onClick={() => adminDeleteMatch(m.id)}>DELETE</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => adminDeleteMatch(m.id)}>✕</button>
                   </div>
                 ))}
               </div>
@@ -761,25 +1353,25 @@ function App() {
 
             {adminTab === "results" && (
               <div>
-                <div className="card-styled" style={{ background: "linear-gradient(135deg, #131a35 0%, #0d1224 100%)", border: "1px solid var(--accent-gold)", marginBbottom: 20 }}>
-                  <h4 style={{ margin: "0 0 6px" }}>Automated API-Football Result Synchronization</h4>
-                  <p style={{ margin: "0 0 14px", font_size: 12, color: "var(--text-secondary)" }}>Executes background validation with sports data providers to fetch results, close matches, and update profiles tracking previous rankings safely.</p>
-                  <button className="btn-styled" style={{ background: "var(--accent-gold)", color: "#000", width: "100%" }} onClick={adminFetchLiveResults}>RUN API PIPELINE HARVEST</button>
+                <div className="card card-gold" style={{ marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, marginBottom: 6 }}>Sincronizare Automată API</div>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>Preia rezultatele de la API-Football și actualizează clasamentul.</p>
+                  <button className="btn btn-gold btn-block" onClick={adminFetchLiveResults}>🔄 RULEAZĂ SINCRONIZAREA</button>
                 </div>
 
-                <h4 style={{ margin: "20px 0 10px" }}>Manual Fallback Resolution Terminal</h4>
+                <div className="section-label" style={{ marginBottom: 10 }}>Override Manual</div>
                 {matches.map(m => (
-                  <div key={m.id} className="card-styled">
-                    <div style={{ display: "flex", justifyContent: "space-between", margin_bottom: 8 }}>
-                      <span style={{ fontWeight: 700, fontSize: 14 }}>{m.team1} vs {m.team2}</span>
-                      <span style={{ color: "var(--accent-gold)", fontWeight: 700 }}>{m.result ? `RESULT: ${m.result}` : "PENDING"}</span>
+                  <div key={m.id} className="card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                      {m.result ? <span className="result-pill">✓ {m.result}</span> : <span className="badge badge-muted">Pending</span>}
                     </div>
-                    <div style={{ display: "flex", gap: 6, margin_top: 10 }}>
-                      <button className="btn-styled" style={{ padding: "6px", flex: 1, font_size: 11 }} onClick={() => adminForceResult(m.id, "1")}>HOME WIN (1)</button>
-                      <button className="btn-styled" style={{ padding: "6px", flex: 1, font_size: 11 }} onClick={() => adminForceResult(m.id, "X")}>DRAW (X)</button>
-                      <button className="btn-styled" style={{ padding: "6px", flex: 1, font_size: 11 }} onClick={() => adminForceResult(m.id, "2")}>AWAY WIN (2)</button>
-                      {m.result && <button className="btn-styled" style={{ padding: "6px", background: "var(--text-secondary)", color: "#fff", font_size: 11 }} onClick={() => adminRevertResult(m.id)}>UNDO</button>}
-                      <button className="btn-styled" style={{ padding: "6px", background: "rgba(255,255,255,0.05)", color: "#fff", font_size: 11 }} onClick={() => setInspectMatchBets(m)}>AUDIT SLIPS</button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[["1","Acasă"],["X","Egal"],["2","Oaspeți"]].map(([key,label]) => (
+                        <button key={key} className="btn btn-sm" style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 11 }} onClick={() => adminForceResult(m.id, key)}>{label} ({key})</button>
+                      ))}
+                      {m.result && <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--muted)', fontSize: 11 }} onClick={() => adminRevertResult(m.id)}>↩</button>}
+                      <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--muted)', fontSize: 11 }} onClick={() => setInspectMatchBets(m)}>👁</button>
                     </div>
                   </div>
                 ))}
@@ -787,20 +1379,20 @@ function App() {
             )}
 
             {adminTab === "winner" && (
-              <div className="card-styled">
-                <h4 style={{ margin: "0 0 12px" }}>Tournament Finalization Bracket</h4>
-                <label style={{ font_size: 11, color: "var(--text-secondary)", display: "block", margin_bottom: 4 }}>Select Official World Cup Champion Team</label>
-                <select className="input-styled" style={{ marginBbottom: 20 }} value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
-                  <option value="">Tournament Active...</option>
-                  {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+              <div className="card card-gold">
+                <div className="section-label" style={{ marginBottom: 8 }}>Turneu Final</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 16 }}>🏆 Campion Mondial</div>
+                <select className="input" style={{ marginBottom: 20 }} value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
+                  <option value="">— Turneu activ —</option>
+                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
                 </select>
 
-                <h4 style={{ margin: "0 0 10px" }}>Provision Champion Betting Odds</h4>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="section-label" style={{ marginBottom: 12 }}>Cote Campion per Echipă</div>
+                <div className="grid-2">
                   {TEAMS.map(t => (
-                    <div key={t} style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.02)", padding: "6px 10px", border_radius: 8 }}>
-                      <span style={{ flex: 1, font_size: 12 }}>{t}</span>
-                      <input type="number" step="0.01" className="input-styled" style={{ width: 74, padding: 6 }} placeholder="10.0" value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminSetOddsConfig(t, e.target.value)} />
+                    <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.02)', padding: '7px 10px', borderRadius: 8 }}>
+                      <span style={{ flex: 1, fontSize: 12 }}>{flagEmoji(t)} {t}</span>
+                      <input type="number" step="0.01" className="input" style={{ width: 72, padding: '6px 8px', fontSize: 13 }} placeholder="10.0" value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminSetOddsConfig(t, e.target.value)} />
                     </div>
                   ))}
                 </div>
@@ -809,19 +1401,23 @@ function App() {
 
             {adminTab === "players" && (
               <div>
-                <h4 style={{ margin: "0 0 12px" }}>User Database Allocation Panel</h4>
+                <div className="section-label" style={{ marginBottom: 12 }}>Toți Jucătorii</div>
                 {Object.keys(users).map(k => {
-                  const target = users[k];
+                  const u = users[k];
                   return (
-                    <div key={k} className="card-styled" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={k} className="admin-match-row">
                       <div>
-                        <div style={{ fontWeight: 700 }}>{String(target.username)} {target.isAdmin && <span style={{ color: "var(--accent-gold)" }}>(Admin)</span>}</div>
-                        <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Fan: {String(target.favoriteTeam)} | Pick: {target.tournamentWinnerPick ? String(target.tournamentWinnerPick) : "None"}</div>
+                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>
+                          {String(u.username)} {u.isAdmin && <span className="badge badge-gold" style={{ fontSize: 10 }}>Admin</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                          {flagEmoji(u.favoriteTeam)} {u.favoriteTeam} · Campion: {u.tournamentWinnerPick || "Neselectat"}
+                        </div>
                       </div>
-                      {!target.isAdmin && (
-                        <button className="btn-styled" style={{ background: "var(--red-loss)", color: "#fff", font_size: 11, padding: "5px 12px" }} onClick={async () => {
-                          if (window.confirm("Purge account records completely?")) {
-                            await supabaseClient.from('profiles').delete().eq('username', target.username);
+                      {!u.isAdmin && (
+                        <button className="btn btn-danger btn-sm" onClick={async () => {
+                          if (window.confirm("Ștergeți contul?")) {
+                            await supabaseClient.from('profiles').delete().eq('username', u.username);
                             fetchAllData();
                           }
                         }}>DELETE</button>
@@ -833,86 +1429,90 @@ function App() {
             )}
           </div>
         )}
-      </div>
 
+      </div>{/* /container */}
+
+      {/* ── BOTTOM NAV (mobile) ── */}
       {session && !currentUser?.isAdmin && (
         <div className="bottom-nav">
-          <button className={`bottom-nav-btn ${page === "profile" ? "active" : ""}`} onClick={() => setPage("profile")}>
-            <span className="bottom-nav-icon">👤</span><span>Profile</span>
-          </button>
-          <button className={`bottom-nav-btn ${page === "leaderboard" ? "active" : ""}`} onClick={() => setPage("leaderboard")}>
-            <span className="bottom-nav-icon">📊</span><span>Standings</span>
-          </button>
-          <button className={`bottom-nav-btn ${page === "matchday" ? "active" : ""}`} onClick={() => setPage("matchday")}>
-            <span className="bottom-nav-icon">⚽</span><span>Matchday</span>
-          </button>
+          {[["profile","👤","Profil"],["leaderboard","📊","Clasament"],["matchday","⚽","Meciuri"]].map(([key, icon, label]) => (
+            <button key={key} className={`nav-btn ${page===key?"active":""}`} onClick={() => setPage(key)}>
+              <span className="nav-btn-icon">{icon}</span>
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
       )}
 
+      {/* ── INSPECT USER MODAL ── */}
       {inspectUser && (
-        <div style={styles.modalOverlay} onClick={() => setInspectUser(null)}>
-          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", margin_bottom: 16 }}>
-              <h3 style={{ margin: 0, color: "var(--accent-gold)" }}>👤 {String(inspectUser.username)}'s Profile</h3>
-              <button style={{ background: "transparent", border: "none", color: "#fff", font_size: 16, cursor: "pointer" }} onClick={() => setInspectUser(null)}>✕</button>
+        <div className="modal-overlay" onClick={() => setInspectUser(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle"></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div className="section-label">Profil</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900 }}>{String(inspectUser.username).toUpperCase()}</div>
+              </div>
+              <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setInspectUser(null)}>✕</button>
             </div>
-            
-            <div style={{ background: "rgba(255,255,255,0.03)", padding: 14, border_radius: 12, display: "flex", flexDirection: "column", gap: 8, margin_bottom: 20 }}>
-              <div style={{ font_size: 13 }}><strong>Favorite Team:</strong> {flagEmoji(inspectUser.favoriteTeam)} {String(inspectUser.favoriteTeam) || "None"}</div>
-              <div style={{ font_size: 13 }}>
-                <strong>Champion Prediction:</strong> {
-                  (isTournamentBegun || inspectUser.isPickLocked || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                    ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick ? String(inspectUser.tournamentWinnerPick) : "Not set"}`
-                    : "🔒 Hidden until Lockout"
-                } {inspectUser.isPickLocked && "🔒"}
+
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: 8, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 13 }}><strong>Echipă favorită:</strong> {flagEmoji(inspectUser.favoriteTeam)} {String(inspectUser.favoriteTeam)}</div>
+              <div style={{ fontSize: 13 }}>
+                <strong>Predicție campion:</strong>{" "}
+                {(isTournamentBegun || inspectUser.isPickLocked || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
+                  ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick || "Neselectat"}`
+                  : "🔒 Ascuns până la start"
+                }
+                {inspectUser.isPickLocked && " 🔒"}
               </div>
             </div>
 
-            <h4 style={{ margin: "0 0 10px", font_size: 14 }}>📋 Historic Selections</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {matches.map(m => {
-                const choice = inspectUser.picks?.[m.id];
-                const matchClosed = m.result || new Date(m.match_date + "T" + m.match_time) <= new Date();
-                const visibleText = (matchClosed || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                  ? (choice ? `Picked [${choice}]` : "➖ No Pick")
-                  : "🔒 Hidden Slip";
-
-                let stateColor = "default";
-                if (m.result && choice) stateColor = choice === m.result ? "green" : "danger";
-
-                return (
-                  <div key={m.id} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.01)", padding: 10, border_radius: 8, border: "1px solid rgba(255,255,255,0.04)" }}>
-                    <div style={{ font_size: 12 }}>
-                      <div style={{ font_weight: 700 }}>{m.team1} vs {m.team2}</div>
-                      <div style={{ color: "var(--text-secondary)", font_size: 10 }}>{m.match_date} {m.result && `(Result: ${m.result})`}</div>
-                    </div>
-                    <span style={styles.badge(stateColor)}>{visibleText}</span>
+            <div className="section-label" style={{ marginBottom: 10 }}>Istoric Selecții</div>
+            {matches.map(m => {
+              const choice = inspectUser.picks?.[m.id];
+              const matchClosed = m.result || new Date(m.match_date+"T"+m.match_time) <= new Date();
+              const visible = (matchClosed || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
+                ? (choice ? `[${choice}]` : "– Nicio predicție") : "🔒 Ascuns";
+              let variant = "muted";
+              if (m.result && choice) variant = choice === m.result ? "green" : "danger";
+              return (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{m.team1} vs {m.team2}</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· Rezultat: ${m.result}`}</div>
                   </div>
-                );
-              })}
-            </div>
+                  <span className={`badge badge-${variant}`}>{visible}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
+      {/* ── INSPECT MATCH BETS MODAL ── */}
       {inspectMatchBets && (
-        <div style={styles.modalOverlay} onClick={() => setInspectMatchBets(null)}>
-          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", margin_bottom: 16 }}>
-              <h3 style={{ margin: 0, font_size: 15 }}>📋 Slips History: {inspectMatchBets.team1} vs {inspectMatchBets.team2}</h3>
-              <button style={{ background: "transparent", border: "none", color: "#fff", font_size: 16, cursor: "pointer" }} onClick={() => setInspectMatchBets(null)}>✕</button>
+        <div className="modal-overlay" onClick={() => setInspectMatchBets(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle"></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div className="section-label">Audit Pariuri</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 900 }}>{inspectMatchBets.team1} vs {inspectMatchBets.team2}</div>
+              </div>
+              <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setInspectMatchBets(null)}>✕</button>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {Object.values(users).filter(u => !u.isAdmin).map(u => {
-                const choice = u.picks?.[inspectMatchBets.id] || "No Prediction";
-                return (
-                  <div key={u.username} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: 10, border_radius: 8 }}>
-                    <span style={{ font_size: 13, font_weight: 700 }}>{String(u.username)}</span>
-                    <span style={styles.badge(choice === inspectMatchBets.result ? "green" : "default")}>{String(choice)}</span>
-                  </div>
-                );
-              })}
-            </div>
+            {Object.values(users).filter(u => !u.isAdmin).map(u => {
+              const choice = u.picks?.[inspectMatchBets.id] || "–";
+              const isCorrect = choice === inspectMatchBets.result;
+              return (
+                <div key={u.username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>{String(u.username)}</span>
+                  <span className={`badge ${isCorrect ? "badge-green" : "badge-muted"}`}>{String(choice)}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
