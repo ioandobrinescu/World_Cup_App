@@ -222,10 +222,32 @@ input, select, button, textarea { font-family: var(--font-body); }
   outline: none;
   transition: border-color 0.2s;
   -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 .input:focus { border-color: rgba(240,180,41,0.5); }
-.input::placeholder { color: var(--muted); }
-.input option { background: #0b1e12; }
+.input::placeholder { color: var(--muted); font-size: 14px; }
+.input option { background: #0b1e12; color: var(--white); }
+
+/* Select wrapper — adds custom dropdown arrow */
+.select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.select-wrap .input { padding-right: 36px; }
+.select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  width: 10px; height: 6px;
+  background: var(--muted);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
 
 /* BUTTONS */
 .btn {
@@ -292,7 +314,9 @@ input, select, button, textarea { font-family: var(--font-body); }
 
 /* TOAST */
 .toast {
-  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+  position: fixed;
+  top: calc(66px + env(safe-area-inset-top, 0px));
+  left: 50%; transform: translateX(-50%);
   background: linear-gradient(135deg, #f0b429, #e09a10);
   color: #0b1e12;
   padding: 11px 22px;
@@ -304,12 +328,12 @@ input, select, button, textarea { font-family: var(--font-body); }
   z-index: 9999;
   box-shadow: 0 8px 28px rgba(240,180,41,0.35);
   white-space: nowrap;
-  animation: toastIn 0.3s ease;
+  animation: toastIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
   pointer-events: none;
 }
 @keyframes toastIn {
-  from { opacity: 0; top: 60px; }
-  to   { opacity: 1; top: 70px; }
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.92); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 /* SECTION HEADINGS */
@@ -347,9 +371,9 @@ input, select, button, textarea { font-family: var(--font-body); }
   text-align: center;
   margin-bottom: 14px;
 }
-.match-team { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+.match-team { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; min-width: 0; }
 .match-flag { font-size: 28px; line-height: 1; }
-.match-team-name { font-size: 13px; font-weight: 800; letter-spacing: 0.3px; }
+.match-team-name { font-size: 13px; font-weight: 800; letter-spacing: 0.3px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; padding: 0 2px; }
 .match-vs {
   font-family: var(--font-display);
   font-size: 13px;
@@ -408,7 +432,10 @@ input, select, button, textarea { font-family: var(--font-body); }
 /* HOME / AUTH */
 .home-hero {
   text-align: center;
-  padding: 60px 20px 40px;
+  padding: 40px 20px 28px;
+}
+@media (min-height: 700px) {
+  .home-hero { padding: 60px 20px 36px; }
 }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1044,10 +1071,12 @@ function App() {
                 <div className="flex-col">
                   <input placeholder="Alege un username" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
                   <input type="password" placeholder="Parolă" className="input" onChange={e => setForm({ ...form, password: e.target.value })} />
-                  <select className="input" onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
-                    <option value="">❤️ Echipa favorită</option>
-                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
-                  </select>
+                  <div className="select-wrap">
+                    <select className="input" onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
+                      <option value="">❤️ Echipa favorită</option>
+                      {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
+                    </select>
+                  </div>
                   {error && <div className="error-text">{error}</div>}
                   <button className="btn btn-gold btn-block" onClick={runRegister}>CREEAZĂ CONT →</button>
                 </div>
@@ -1105,10 +1134,12 @@ function App() {
                 {currentUser.isPickLocked && <span className="badge badge-green">BLOCAT 🔒</span>}
               </div>
               <div className="flex-row">
-                <select className="input" style={{ flex: 1 }} value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
-                  <option value="">Selectați echipa...</option>
-                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — cotă {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
-                </select>
+                <div className="select-wrap" style={{ flex: 1 }}>
+                  <select className="input" value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
+                    <option value="">Selectați echipa...</option>
+                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — cotă {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
+                  </select>
+                </div>
                 {!currentUser.isPickLocked && !isTournamentBegun && (
                   <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>BLOCHEAZĂ</button>
                 )}
@@ -1164,6 +1195,14 @@ function App() {
               <div className="section-title">Clasament Arena</div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>Puncte cumulative bazate pe cote · Egalitate: nr. victorii</div>
             </div>
+
+            {sortedLeaderboard.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '50px 0' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🏟️</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Arena e goală</div>
+                <div style={{ fontSize: 13 }}>Niciun jucător înregistrat încă.</div>
+              </div>
+            )}
 
             {sortedLeaderboard.map((u, i) => {
               const rank = i + 1;
@@ -1318,12 +1357,16 @@ function App() {
                 <div className="card card-pitch">
                   <div className="section-label" style={{ marginBottom: 14 }}>Adaugă Meci</div>
                   <div className="grid-2">
-                    <select className="input" value={matchForm.team1} onChange={e=>setMatchForm({...matchForm,team1:e.target.value})}>
-                      <option value="">Echipa Acasă</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
-                    </select>
-                    <select className="input" value={matchForm.team2} onChange={e=>setMatchForm({...matchForm,team2:e.target.value})}>
-                      <option value="">Echipa Oaspeți</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
-                    </select>
+                    <div className="select-wrap">
+                      <select className="input" value={matchForm.team1} onChange={e=>setMatchForm({...matchForm,team1:e.target.value})}>
+                        <option value="">Echipa Acasă</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div className="select-wrap">
+                      <select className="input" value={matchForm.team2} onChange={e=>setMatchForm({...matchForm,team2:e.target.value})}>
+                        <option value="">Echipa Oaspeți</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
+                      </select>
+                    </div>
                     <input type="date" className="input" value={matchForm.date} onChange={e=>setMatchForm({...matchForm,date:e.target.value})} />
                     <input type="time" className="input" value={matchForm.time} onChange={e=>setMatchForm({...matchForm,time:e.target.value})} />
                     <input type="number" step="0.01" placeholder="Cotă 1" className="input" value={matchForm.odds1} onChange={e=>setMatchForm({...matchForm,odds1:e.target.value})} />
@@ -1382,10 +1425,12 @@ function App() {
               <div className="card card-gold">
                 <div className="section-label" style={{ marginBottom: 8 }}>Turneu Final</div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 16 }}>🏆 Campion Mondial</div>
-                <select className="input" style={{ marginBottom: 20 }} value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
-                  <option value="">— Turneu activ —</option>
-                  {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
-                </select>
+                <div className="select-wrap" style={{ marginBottom: 20 }}>
+                  <select className="input" value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
+                    <option value="">— Turneu activ —</option>
+                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
+                  </select>
+                </div>
 
                 <div className="section-label" style={{ marginBottom: 12 }}>Cote Campion per Echipă</div>
                 <div className="grid-2">
