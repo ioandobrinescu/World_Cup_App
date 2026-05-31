@@ -225,25 +225,40 @@ function App() {
     setError("");
     const isFirstAdmin = uname === "dobrinescu" && form.password === "admin123";
     
-    const { data, error: regError } = await supabaseClient
+    // Fix: Use a globally valid email format (.com) to pass standard Supabase internal regex validation
+    const validEmail = `${uname}@pariuriwc2026.com`;
+
+    const { data: authData, error: regError } = await supabaseClient
       .auth
       .signUp({
-        email: `${uname}@pariuriwc2026.internal`,
-        password: form.password,
-        options: {
-          data: {
-            username: form.username.trim(),
-            is_admin: isFirstAdmin,
-            champion_pick: form.championPick || null,
-            picks: {}
-          }
-        }
+        email: validEmail,
+        password: form.password
       });
 
     if (regError) {
       console.error("Supabase Registration Error:", regError);
       setError(`Registration sync failure: ${regError.message}`);
       return;
+    }
+
+    // Explicitly write transactional custom parameters to your custom database profiles table
+    if (authData && authData.user) {
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .insert([{
+          id: authData.user.id,
+          username: form.username.trim(),
+          password: form.password, // Fallback string tracking matched to application loop
+          is_admin: isFirstAdmin,
+          champion_pick: form.championPick || null,
+          picks: {}
+        }]);
+
+      if (profileError) {
+        console.error("Profile Sync Error:", profileError);
+        setError(`Database constraint failure: ${profileError.message}`);
+        return;
+      }
     }
 
     await fetchCloudData();
