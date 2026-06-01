@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Pariuri World Cup 2026</title>
+<title>World Cup 2026 — Pick'em</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%86%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,19 +14,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
-  --pitch: #0b1e12;
-  --pitch-mid: #112518;
-  --pitch-light: #163020;
-  --gold: #f0b429;
-  --gold-light: #ffd166;
-  --gold-dim: rgba(240,180,41,0.15);
-  --red: #e63946;
-  --green: #52c41a;
-  --blue: #4895ef;
-  --white: #f0f4f0;
-  --muted: rgba(240,244,240,0.45);
-  --card: rgba(255,255,255,0.04);
-  --card-border: rgba(255,255,255,0.07);
+  /* USA 2026 palette — deep navy base, patriotic red & blue, trophy gold accent */
+  --pitch: #0a1230;
+  --pitch-mid: #111c44;
+  --pitch-light: #18244f;
+  --gold: #f5c542;
+  --gold-light: #ffd97a;
+  --gold-dim: rgba(245,197,66,0.15);
+  --red: #e23b4e;
+  --red-dim: rgba(226,59,78,0.15);
+  --green: #2fbf71;
+  --blue: #3b7bff;
+  --blue-dim: rgba(59,123,255,0.15);
+  --white: #eef2ff;
+  --muted: rgba(238,242,255,0.5);
+  --card: rgba(255,255,255,0.045);
+  --card-border: rgba(255,255,255,0.09);
   --radius: 14px;
   --radius-sm: 8px;
   --font-display: 'Barlow Condensed', sans-serif;
@@ -45,26 +48,21 @@ body {
   color: var(--white);
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(20,70,30,0.9) 0%, transparent 70%),
-    radial-gradient(ellipse 80% 40% at 80% 110%, rgba(10,40,20,0.6) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 55% at 50% -10%, rgba(59,123,255,0.20) 0%, transparent 70%),
+    radial-gradient(ellipse 90% 45% at 50% 112%, rgba(226,59,78,0.16) 0%, transparent 62%),
     var(--pitch);
   -webkit-font-smoothing: antialiased;
   padding-bottom: env(safe-area-inset-bottom, 0);
   overflow-x: hidden;
 }
 
-/* Grass line texture overlay */
+/* Subtle "stars" dot field overlay */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: repeating-linear-gradient(
-    180deg,
-    transparent 0px,
-    transparent 38px,
-    rgba(255,255,255,0.012) 38px,
-    rgba(255,255,255,0.012) 40px
-  );
+  background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1.5px);
+  background-size: 30px 30px;
   pointer-events: none;
   z-index: 0;
 }
@@ -87,7 +85,7 @@ input, select, button, textarea { font-family: var(--font-body); }
   background: radial-gradient(circle at 35% 35%, #fff 0%, #bbb 40%, #555 100%);
   border-radius: 50%;
   animation: bounce 0.7s ease-in-out infinite alternate;
-  box-shadow: 0 0 30px rgba(240,180,41,0.3);
+  box-shadow: 0 0 30px rgba(59,123,255,0.45);
 }
 @keyframes bounce {
   from { transform: translateY(-14px) rotate(-10deg); }
@@ -108,9 +106,11 @@ input, select, button, textarea { font-family: var(--font-body); }
   display: flex; align-items: center;
   padding: 0 20px;
   height: 58px;
-  background: rgba(11,30,18,0.92);
+  background: rgba(10,18,48,0.92);
   backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(240,180,41,0.15);
+  border-width: 0 0 2px 0;
+  border-style: solid;
+  border-image: linear-gradient(90deg, var(--red) 0%, var(--white) 50%, var(--blue) 100%) 1;
 }
 .nav-logo {
   font-family: var(--font-display);
@@ -151,9 +151,10 @@ input, select, button, textarea { font-family: var(--font-body); }
   position: fixed; bottom: 0; left: 0; right: 0;
   height: calc(62px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: rgba(9,24,14,0.97);
+  background: rgba(8,14,40,0.97);
   backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(240,180,41,0.12);
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(90deg, var(--red) 0%, var(--white) 50%, var(--blue) 100%) 1;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -202,18 +203,18 @@ input, select, button, textarea { font-family: var(--font-body); }
   overflow: hidden;
 }
 .card-gold {
-  background: linear-gradient(135deg, rgba(240,180,41,0.08) 0%, rgba(11,30,18,0.8) 100%);
-  border-color: rgba(240,180,41,0.25);
+  background: linear-gradient(135deg, rgba(245,197,66,0.08) 0%, rgba(10,18,48,0.85) 100%);
+  border-color: rgba(245,197,66,0.25);
 }
 .card-pitch {
-  background: linear-gradient(135deg, rgba(22,48,32,0.9) 0%, rgba(11,30,18,0.95) 100%);
-  border-color: rgba(255,255,255,0.06);
+  background: linear-gradient(135deg, rgba(24,36,79,0.92) 0%, rgba(10,18,48,0.96) 100%);
+  border-color: rgba(255,255,255,0.07);
 }
 
 /* INPUTS */
 .input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: var(--radius-sm);
   color: var(--white);
   padding: 12px 14px;
@@ -225,9 +226,9 @@ input, select, button, textarea { font-family: var(--font-body); }
   -moz-appearance: none;
   appearance: none;
 }
-.input:focus { border-color: rgba(240,180,41,0.5); }
+.input:focus { border-color: rgba(59,123,255,0.6); }
 .input::placeholder { color: var(--muted); font-size: 14px; }
-.input option { background: #0b1e12; color: var(--white); }
+.input option { background: #0c1430; color: var(--white); }
 
 /* Select wrapper — adds custom dropdown arrow */
 .select-wrap {
@@ -264,11 +265,11 @@ input, select, button, textarea { font-family: var(--font-body); }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .btn:active { transform: scale(0.97); }
-.btn-gold { background: linear-gradient(135deg, #f0b429, #e09a10); color: #0b1e12; }
-.btn-gold:hover { background: linear-gradient(135deg, #ffd166, #f0b429); }
-.btn-danger { background: rgba(230,57,70,0.15); color: var(--red); border: 1px solid rgba(230,57,70,0.3); }
-.btn-danger:hover { background: rgba(230,57,70,0.25); }
-.btn-green { background: rgba(82,196,26,0.15); color: var(--green); border: 1px solid rgba(82,196,26,0.3); }
+.btn-gold { background: linear-gradient(135deg, #f5c542, #e0a510); color: #0a1230; }
+.btn-gold:hover { background: linear-gradient(135deg, #ffd97a, #f5c542); }
+.btn-danger { background: rgba(226,59,78,0.15); color: var(--red); border: 1px solid rgba(226,59,78,0.3); }
+.btn-danger:hover { background: rgba(226,59,78,0.25); }
+.btn-green { background: rgba(47,191,113,0.15); color: var(--green); border: 1px solid rgba(47,191,113,0.3); }
 .btn-sm { padding: 7px 14px; font-size: 12px; }
 .btn-block { width: 100%; }
 
@@ -283,11 +284,11 @@ input, select, button, textarea { font-family: var(--font-body); }
   text-transform: uppercase;
 }
 .badge-gold { background: var(--gold-dim); color: var(--gold); }
-.badge-green { background: rgba(82,196,26,0.12); color: var(--green); }
-.badge-red { background: rgba(230,57,70,0.12); color: var(--red); }
+.badge-green { background: rgba(47,191,113,0.14); color: var(--green); }
+.badge-red { background: rgba(226,59,78,0.14); color: var(--red); }
 .badge-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
 
-/* PICK BUTTONS */
+/* PICK BUTTONS — HOME (red) / DRAW (gold) / AWAY (blue) */
 .pick-row { display: flex; gap: 8px; }
 .pick-btn {
   flex: 1; border-radius: var(--radius-sm);
@@ -301,11 +302,11 @@ input, select, button, textarea { font-family: var(--font-body); }
 .pick-btn:active { transform: scale(0.96); }
 .pick-btn-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; }
 .pick-btn-odds { font-family: var(--font-display); font-size: 18px; font-weight: 900; color: var(--white); }
-.pick-btn.selected-1 { background: rgba(82,196,26,0.15); border-color: var(--green); }
-.pick-btn.selected-1 .pick-btn-odds, .pick-btn.selected-1 .pick-btn-label { color: var(--green); }
-.pick-btn.selected-X { background: rgba(240,180,41,0.15); border-color: var(--gold); }
+.pick-btn.selected-1 { background: rgba(226,59,78,0.16); border-color: var(--red); }
+.pick-btn.selected-1 .pick-btn-odds, .pick-btn.selected-1 .pick-btn-label { color: var(--red); }
+.pick-btn.selected-X { background: rgba(245,197,66,0.16); border-color: var(--gold); }
 .pick-btn.selected-X .pick-btn-odds, .pick-btn.selected-X .pick-btn-label { color: var(--gold); }
-.pick-btn.selected-2 { background: rgba(72,149,239,0.15); border-color: var(--blue); }
+.pick-btn.selected-2 { background: rgba(59,123,255,0.16); border-color: var(--blue); }
 .pick-btn.selected-2 .pick-btn-odds, .pick-btn.selected-2 .pick-btn-label { color: var(--blue); }
 
 /* DISTRIBUTION BAR */
@@ -317,8 +318,8 @@ input, select, button, textarea { font-family: var(--font-body); }
   position: fixed;
   top: calc(66px + env(safe-area-inset-top, 0px));
   left: 50%; transform: translateX(-50%);
-  background: linear-gradient(135deg, #f0b429, #e09a10);
-  color: #0b1e12;
+  background: linear-gradient(135deg, #f5c542, #e0a510);
+  color: #0a1230;
   padding: 11px 22px;
   border-radius: 30px;
   font-family: var(--font-display);
@@ -326,7 +327,7 @@ input, select, button, textarea { font-family: var(--font-body); }
   font-size: 14px;
   letter-spacing: 0.5px;
   z-index: 9999;
-  box-shadow: 0 8px 28px rgba(240,180,41,0.35);
+  box-shadow: 0 8px 28px rgba(245,197,66,0.35);
   white-space: nowrap;
   animation: toastIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
   pointer-events: none;
@@ -393,8 +394,8 @@ input, select, button, textarea { font-family: var(--font-body); }
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
-.lb-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(240,180,41,0.2); }
-.lb-row.gold-row { background: rgba(240,180,41,0.07); border-color: rgba(240,180,41,0.25); }
+.lb-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(245,197,66,0.2); }
+.lb-row.gold-row { background: rgba(245,197,66,0.07); border-color: rgba(245,197,66,0.25); }
 .lb-rank-num {
   font-family: var(--font-display);
   font-size: 22px; font-weight: 900;
@@ -409,8 +410,8 @@ input, select, button, textarea { font-family: var(--font-body); }
 
 /* PROFILE HEADER */
 .profile-hero {
-  background: linear-gradient(135deg, rgba(22,48,32,0.95) 0%, rgba(17,37,24,0.95) 100%);
-  border: 1px solid rgba(240,180,41,0.2);
+  background: linear-gradient(135deg, rgba(24,36,79,0.95) 0%, rgba(16,25,63,0.95) 100%);
+  border: 1px solid rgba(245,197,66,0.2);
   border-radius: var(--radius);
   padding: 22px 20px;
   margin-bottom: 12px;
@@ -418,12 +419,12 @@ input, select, button, textarea { font-family: var(--font-body); }
 }
 .profile-avatar {
   width: 56px; height: 56px;
-  background: linear-gradient(135deg, var(--gold), #b87f10);
+  background: linear-gradient(135deg, var(--gold), #b8860b);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
   font-size: 22px; font-weight: 900;
-  color: #0b1e12;
+  color: #0a1230;
   flex-shrink: 0;
 }
 .profile-name { font-family: var(--font-display); font-size: 26px; font-weight: 900; line-height: 1; }
@@ -440,7 +441,7 @@ input, select, button, textarea { font-family: var(--font-body); }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--gold-dim);
-  border: 1px solid rgba(240,180,41,0.2);
+  border: 1px solid rgba(245,197,66,0.25);
   color: var(--gold);
   font-family: var(--font-display);
   font-size: 11px; font-weight: 800;
@@ -458,7 +459,13 @@ input, select, button, textarea { font-family: var(--font-body); }
   letter-spacing: -1px;
   margin-bottom: 8px;
 }
-.hero-title .accent { color: var(--gold); }
+.hero-title .accent {
+  background: linear-gradient(90deg, var(--red), var(--gold) 55%, var(--blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--gold);
+}
 .hero-sub {
   font-size: 15px;
   color: var(--muted);
@@ -504,8 +511,8 @@ input, select, button, textarea { font-family: var(--font-body); }
   font-weight: 900;
   letter-spacing: 2px;
   color: var(--white);
-  background: rgba(240,180,41,0.06);
-  border: 1px solid rgba(240,180,41,0.2);
+  background: rgba(59,123,255,0.07);
+  border: 1px solid rgba(59,123,255,0.25);
   border-radius: var(--radius);
   padding: 20px 28px;
   width: 100%;
@@ -529,7 +536,7 @@ input, select, button, textarea { font-family: var(--font-body); }
   white-space: nowrap;
   transition: all 0.2s;
 }
-.admin-tab.active { background: var(--gold); color: #0b1e12; }
+.admin-tab.active { background: var(--gold); color: #0a1230; }
 
 /* MODAL */
 .modal-overlay {
@@ -545,7 +552,7 @@ input, select, button, textarea { font-family: var(--font-body); }
   .modal-overlay { align-items: center; padding: 20px; }
 }
 .modal-content {
-  background: #0d1f14;
+  background: #0c1430;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius) var(--radius) 0 0;
   width: 100%;
@@ -583,7 +590,7 @@ input, select, button, textarea { font-family: var(--font-body); }
 
 /* MVP BANNER */
 .mvp-banner {
-  background: linear-gradient(135deg, #1a2d12 0%, #3a3010 100%);
+  background: linear-gradient(135deg, #101a3f 0%, #2a1020 100%);
   border: 1px solid var(--gold);
   border-radius: var(--radius);
   padding: 16px 20px;
@@ -594,14 +601,14 @@ input, select, button, textarea { font-family: var(--font-body); }
 .mvp-banner::before {
   content: '⭐';
   position: absolute; font-size: 80px;
-  opacity: 0.06; top: -10px; right: -10px;
+  opacity: 0.07; top: -10px; right: -10px;
 }
 
 /* RESULT PILL */
 .result-pill {
   display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(82,196,26,0.12);
-  border: 1px solid rgba(82,196,26,0.25);
+  background: rgba(47,191,113,0.12);
+  border: 1px solid rgba(47,191,113,0.25);
   color: var(--green);
   padding: 4px 12px;
   border-radius: 20px;
@@ -612,8 +619,8 @@ input, select, button, textarea { font-family: var(--font-body); }
 
 /* CHAMPION CARD */
 .champion-card {
-  background: linear-gradient(135deg, rgba(17,37,24,0.95) 0%, rgba(22,48,32,0.95) 100%);
-  border: 1px solid rgba(240,180,41,0.3);
+  background: linear-gradient(135deg, rgba(24,36,79,0.95) 0%, rgba(16,25,63,0.95) 100%);
+  border: 1px solid rgba(245,197,66,0.3);
   border-radius: var(--radius);
   padding: 18px 20px;
   margin-bottom: 12px;
@@ -658,7 +665,7 @@ input, select, button, textarea { font-family: var(--font-body); }
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(240,180,41,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(245,197,66,0.25); border-radius: 3px; }
 
 /* RESPONSIVE */
 @media (min-width: 600px) {
@@ -683,8 +690,8 @@ input, select, button, textarea { font-family: var(--font-body); }
 /* LIVE badge */
 .live-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  background: rgba(230,57,70,0.15);
-  border: 1px solid rgba(230,57,70,0.3);
+  background: rgba(226,59,78,0.15);
+  border: 1px solid rgba(226,59,78,0.3);
   color: var(--red);
   font-family: var(--font-display);
   font-size: 10px; font-weight: 800;
@@ -708,14 +715,14 @@ input, select, button, textarea { font-family: var(--font-body); }
 .error-text { color: var(--red); font-size: 13px; font-weight: 600; margin-top: 4px; }
 
 /* Champion odds badge in select */
-select option { background: #0b1e12; }
+select option { background: #0c1430; }
 </style>
 </head>
 <body>
 
 <div id="loader">
   <div class="loader-ball"></div>
-  <div class="loader-text">Loading Arena...</div>
+  <div class="loader-text">Warming Up…</div>
 </div>
 
 <div id="root"></div>
@@ -727,9 +734,9 @@ const SUPABASE_URL = "https://mfvwumillzpofmvjibkp.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_QUjFKlHhgcIgisSV-SESdg_49GIA0c0";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const API_FOOTBALL_KEY = "YOUR_API_FOOTBALL_KEY_HERE";
-const API_LEAGUE_ID = 1;
-const API_SEASON = 2026;
+// Results are pulled from football-data.org by the `sync-results` Supabase Edge
+// Function, which keeps the API token server-side. See SETUP_API_SYNC.md. The function
+// runs automatically on a cron schedule; the admin button below just triggers it on demand.
 
 const TEAMS = [
   "United States","Canada","Mexico","Argentina","Brazil","Colombia","Ecuador","Paraguay","Uruguay",
@@ -758,6 +765,25 @@ const flagEmoji = (team) => {
   return flags[team] || "🏴‍☠️";
 };
 
+// Map a football-data.org team name to the app's dropdown name (so flags + the
+// API result-matching line up). Mirrors the CANON map in the Edge Function.
+const _CANON_ALIAS = {
+  caboverde: "capeverde", capeverdeislands: "capeverde",
+  bosniaandherzegovina: "bosnia", bosniaherzegovina: "bosnia",
+  turkiye: "turkey", cotedivoire: "ivorycoast",
+  drcongo: "congodr", democraticrepublicofcongo: "congodr",
+  unitedstates: "usa", unitedstatesofamerica: "usa",
+  republicofkorea: "southkorea", korearepublic: "southkorea",
+};
+const _canonName = (s) => {
+  const base = (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  return _CANON_ALIAS[base] || base;
+};
+const APP_TEAM_BY_CANON = {};
+// (diacritics stripped via Unicode NFD range U+0300–U+036F)
+TEAMS.forEach(t => { APP_TEAM_BY_CANON[_canonName(t)] = t; });
+const apiTeamToApp = (name) => APP_TEAM_BY_CANON[_canonName(name)] || name;
+
 function App() {
   const [session, setSession] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pariuri_session")); } catch { return null; }
@@ -776,6 +802,11 @@ function App() {
   const [globalTimer, setGlobalTimer] = useState("");
   const [isTournamentBegun, setIsTournamentBegun] = useState(false);
   const [matchForm, setMatchForm] = useState({ team1: "", team2: "", date: "", time: "21:00", odds1: "", oddsX: "", odds2: "", stage: "", apiFixtureId: "" });
+  const [scoreDrafts, setScoreDrafts] = useState({});
+  const [importOpen, setImportOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [apiFixtures, setApiFixtures] = useState([]);
+  const [importFilter, setImportFilter] = useState("");
 
   async function fetchAllData() {
     try {
@@ -787,7 +818,7 @@ function App() {
         p.forEach(u => {
           if (u.username) {
             mapped[u.username.toLowerCase().trim()] = {
-              id: u.id, username: String(u.username), password: String(u.password),
+              id: u.id, username: String(u.username), password: u.password != null ? String(u.password) : "",
               isAdmin: u.is_admin || false, favoriteTeam: u.favorite_team ? String(u.favorite_team) : "",
               tournamentWinnerPick: u.tournament_winner_pick ? String(u.tournament_winner_pick) : null,
               isPickLocked: u.is_pick_locked || false,
@@ -816,7 +847,9 @@ function App() {
     if (session) {
       localStorage.setItem("pariuri_session", JSON.stringify(session));
       const targetUser = users[session.username.toLowerCase()];
-      if (targetUser?.isAdmin) { setPage("admin"); }
+      if (targetUser?.isAdmin) {
+        if (page === "home" || page === "gateway") setPage("admin");
+      }
       else if (page === "home") {
         const timeRemaining = WORLD_CUP_KICKOFF - new Date();
         setPage(timeRemaining > 0 ? "gateway" : "profile");
@@ -829,12 +862,12 @@ function App() {
   useEffect(() => {
     function computeTimer() {
       const remaining = WORLD_CUP_KICKOFF - new Date();
-      if (remaining <= 0) { setIsTournamentBegun(true); setGlobalTimer("AO VIU"); return; }
+      if (remaining <= 0) { setIsTournamentBegun(true); setGlobalTimer("LIVE"); return; }
       const days = Math.floor(remaining / 86400000);
       const hours = Math.floor((remaining % 86400000) / 3600000);
       const minutes = Math.floor((remaining % 3600000) / 60000);
       const seconds = Math.floor((remaining % 60000) / 1000);
-      setGlobalTimer(`${days}z ${hours}h ${minutes}m ${seconds}s`);
+      setGlobalTimer(`${days}d ${hours}h ${minutes}m ${seconds}s`);
     }
     computeTimer();
     const id = setInterval(computeTimer, 1000);
@@ -861,12 +894,12 @@ function App() {
   }, [users, matches, tournamentConfig]);
 
   const matchdayMvpNode = useMemo(() => {
-    const mds = [...new Set(matches.filter(m => m.result).map(m => parseInt(m.matchday) || 1))];
+    const mds = [...new Set(matches.filter(m => m.result).map(m => parseInt(m.tournament_stage) || 1))];
     if (!mds.length) return null;
     const latestMD = Math.max(...mds);
     const scores = Object.values(users).filter(u => !u.isAdmin).map(u => {
       let mdWins = 0, mdPts = 0;
-      matches.filter(m => parseInt(m.matchday) === latestMD && m.result).forEach(m => {
+      matches.filter(m => parseInt(m.tournament_stage) === latestMD && m.result).forEach(m => {
         if (u.picks?.[m.id] === m.result) {
           mdWins++;
           mdPts += parseFloat(m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2) || 0;
@@ -877,26 +910,37 @@ function App() {
     return (scores[0] && scores[0].mdWins > 0) ? { matchday: latestMD, username: scores[0].username, wins: scores[0].mdWins } : null;
   }, [users, matches]);
 
-  function runLogin() {
-    if (!form.username || !form.password) { setError("Completați toate câmpurile"); return; }
-    const target = users[form.username.trim().toLowerCase()];
-    if (!target || target.password !== form.password) { setError("Date invalide"); return; }
-    setError(""); setSession({ username: target.username });
+  async function runLogin() {
+    if (!form.username || !form.password) { setError("Please fill in all fields"); return; }
+    const normalized = form.username.trim().toLowerCase();
+    const target = users[normalized];
+    if (!target) { setError("Invalid login details"); return; }
+    setError("");
+    // Primary: credentials live in Supabase Auth, not in a DB column.
+    const { error: authErr } = await supabaseClient.auth.signInWithPassword({
+      email: `${normalized}@pariuriwc2026.com`, password: form.password
+    });
+    if (!authErr) { setSession({ username: target.username }); return; }
+    // Transitional fallback for legacy accounts whose plaintext password predates the
+    // Auth migration. Goes inert once `password` is blanked in the DB (see setup SQL).
+    if (target.password && target.password === form.password) { setSession({ username: target.username }); return; }
+    setError("Invalid login details");
   }
 
   async function runRegister() {
-    if (!form.username || !form.password || !form.favoriteTeam) { setError("Completați toate câmpurile"); return; }
+    if (!form.username || !form.password || !form.favoriteTeam) { setError("Please fill in all fields"); return; }
     const normalized = form.username.trim().toLowerCase();
-    if (users[normalized]) { setError("Username deja folosit"); return; }
-    const isSystemAdmin = normalized === "dobrinescu" && form.password === "admin123";
+    if (users[normalized]) { setError("Username already taken"); return; }
     const generatedEmail = `${normalized}@pariuriwc2026.com`;
     const { data: authWrap, error: authErr } = await supabaseClient.auth.signUp({ email: generatedEmail, password: form.password });
     if (authErr) { setError(authErr.message); return; }
     if (authWrap.user) {
+      // Password is held by Supabase Auth — never store the plaintext in the profile row.
+      // Admins are provisioned in the DB (set is_admin = true), not via client-side magic creds.
       const { error: profErr } = await supabaseClient.from('profiles').insert([{
-        id: authWrap.user.id, username: form.username.trim(), password: form.password,
-        is_admin: isSystemAdmin, favorite_team: form.favoriteTeam,
-        tournament_winner_pick: null, is_pick_locked: false, picks: {}, previous_rank: 0
+        id: authWrap.user.id, username: form.username.trim(), password: "",
+        is_admin: false, favorite_team: form.favoriteTeam,
+        tournament_winner_pick: null, is_pick_locked: false, picks: {}
       }]);
       if (profErr) { setError(profErr.message); return; }
     }
@@ -907,31 +951,31 @@ function App() {
   async function submitPrediction(matchId, outcome) {
     const m = matches.find(x => x.id === matchId);
     if (!m || m.result || new Date(m.match_date + "T" + m.match_time) <= new Date()) {
-      triggerToast("🔒 Predicțiile sunt închise"); return;
+      triggerToast("🔒 Predictions are closed"); return;
     }
     const localUpdated = { ...(currentUser.picks || {}), [matchId]: outcome };
     const { error: updateErr } = await supabaseClient.from('profiles').update({ picks: localUpdated }).eq('username', currentUser.username);
-    if (updateErr) { triggerToast("❌ Eroare de sincronizare"); return; }
+    if (updateErr) { triggerToast("❌ Sync error"); return; }
     setUsers(prev => ({ ...prev, [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated } }));
-    triggerToast("⚽ Predicție salvată!");
+    triggerToast("⚽ Pick saved!");
   }
 
   async function updateChampionPrediction(team) {
     if (currentUser.isPickLocked || isTournamentBegun) return;
     await supabaseClient.from('profiles').update({ tournament_winner_pick: team || null }).eq('username', currentUser.username);
-    fetchAllData(); triggerToast("🏆 Campion actualizat");
+    fetchAllData(); triggerToast("🏆 Champion updated");
   }
 
   async function lockChampionChoice() {
-    if (!currentUser.tournamentWinnerPick) { triggerToast("Selectați mai întâi o echipă"); return; }
-    if (!window.confirm("Blocați selecția definitiv?")) return;
+    if (!currentUser.tournamentWinnerPick) { triggerToast("Pick a team first"); return; }
+    if (!window.confirm("Lock in your champion pick for good?")) return;
     await supabaseClient.from('profiles').update({ is_pick_locked: true }).eq('username', currentUser.username);
-    fetchAllData(); triggerToast("🔒 Campion blocat!");
+    fetchAllData(); triggerToast("🔒 Champion locked in!");
   }
 
   function computeGlobalBetDistribution(matchId) {
     const pool = Object.values(users).filter(u => !u.isAdmin).map(u => u.picks?.[matchId]).filter(Boolean);
-    if (!pool.length) return { p1: 33, pX: 34, p2: 33 };
+    if (!pool.length) return { p1: 0, pX: 0, p2: 0 };
     const c = { "1": 0, "X": 0, "2": 0 };
     pool.forEach(v => { if (c[v] !== undefined) c[v]++; });
     const tot = pool.length;
@@ -939,62 +983,91 @@ function App() {
   }
 
   async function adminFetchLiveResults() {
-    if (API_FOOTBALL_KEY === "YOUR_API_FOOTBALL_KEY_HERE") { alert("Adaugați cheia API_FOOTBALL_KEY"); return; }
-    triggerToast("🔄 Contactare API-Football...");
+    triggerToast("🔄 Syncing results…");
     try {
-      const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${API_LEAGUE_ID}&season=${API_SEASON}`, { headers: { "x-apisports-key": API_FOOTBALL_KEY } });
-      const data = await res.json();
-      if (!data.response?.length) { alert("Niciun răspuns primit"); return; }
-      let count = 0;
-      for (const item of data.response) {
-        const fixId = item.fixture.id.toString();
-        const status = item.fixture.status.short;
-        const local = matches.find(x => x.api_fixture_id === fixId);
-        if (local && !local.result && ["FT","AET","PEN"].includes(status)) {
-          const h = item.goals.home, a = item.goals.away;
-          await commitMatchResultWithRankSnapshot(local.id, h > a ? "1" : a > h ? "2" : "X");
-          count++;
-        }
-      }
-      await fetchAllData(); alert(`Sincronizare completă: ${count} meciuri finalizate.`);
-    } catch (err) { alert(`Eroare: ${err.message}`); }
+      const { data, error: fnErr } = await supabaseClient.functions.invoke('sync-results');
+      if (fnErr) { alert(`Sync error: ${fnErr.message}`); return; }
+      if (data?.error) { alert(`API error: ${data.error}`); return; }
+      await fetchAllData();
+      alert(`Sync complete: ${data?.updated ?? 0} matches updated.`);
+    } catch (err) { alert(`Error: ${err.message}`); }
   }
 
-  async function commitMatchResultWithRankSnapshot(matchId, outcome) {
-    for (let i = 0; i < sortedLeaderboard.length; i++)
-      await supabaseClient.from('profiles').update({ previous_rank: i + 1 }).eq('username', sortedLeaderboard[i].username);
-    await supabaseClient.from('matches').update({ result: outcome }).eq('id', matchId);
+  async function commitMatchResultWithRankSnapshot(matchId, outcome, homeScore = null, awayScore = null) {
+    // Writing the result also snapshots every player's prior rank for the ↑/↓ arrows —
+    // handled by the `trg_snapshot_ranks` DB trigger (see supabase/sql/leaderboard_rank_snapshot.sql),
+    // which fires before the result lands and works for both this manual path and the cron sync.
+    const patch = { result: outcome };
+    if (homeScore !== null && awayScore !== null) { patch.home_score = homeScore; patch.away_score = awayScore; }
+    await supabaseClient.from('matches').update(patch).eq('id', matchId);
+  }
+
+  async function adminLoadFixtures() {
+    setImportLoading(true);
+    try {
+      const { data, error: fnErr } = await supabaseClient.functions.invoke('sync-results', { body: { mode: 'list' } });
+      if (fnErr || data?.error) { alert(`Import error: ${fnErr?.message || data?.error}`); return; }
+      setApiFixtures(Array.isArray(data?.fixtures) ? data.fixtures : []);
+      setImportFilter("");
+      setImportOpen(true);
+    } catch (e) { alert(`Error: ${e.message}`); }
+    finally { setImportLoading(false); }
+  }
+
+  function adminPickFixture(fx) {
+    const d = new Date(fx.utcDate);
+    const pad = n => String(n).padStart(2, '0');
+    const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    setMatchForm(prev => ({ ...prev, team1: apiTeamToApp(fx.home), team2: apiTeamToApp(fx.away), date, time, apiFixtureId: String(fx.id), stage: fx.matchday ? String(fx.matchday) : prev.stage }));
+    setImportOpen(false);
+    triggerToast("⚽ Now add the odds and save");
   }
 
   async function adminCreateMatch() {
-    if (!matchForm.team1 || !matchForm.team2 || !matchForm.date || !matchForm.odds1) { alert("Câmpuri lipsă"); return; }
+    if (!matchForm.team1 || !matchForm.team2 || !matchForm.date || !matchForm.odds1) { alert("Missing fields"); return; }
+    if (matchForm.team1 === matchForm.team2) { alert("Teams must be different"); return; }
+    if (matchForm.apiFixtureId && matches.some(m => String(m.api_fixture_id) === String(matchForm.apiFixtureId))) {
+      if (!window.confirm("A match with this API Fixture ID already exists. Continue?")) return;
+    }
     await supabaseClient.from('matches').insert([{
       id: `match_${Date.now()}`, team1: matchForm.team1, team2: matchForm.team2,
       match_date: matchForm.date, match_time: matchForm.time,
       odds1: parseFloat(matchForm.odds1), oddsx: parseFloat(matchForm.oddsX || 3.0), odds2: parseFloat(matchForm.odds2),
-      matchday: matchForm.stage || "1", result: null, api_fixture_id: matchForm.apiFixtureId || null
+      tournament_stage: matchForm.stage || "1", result: null, api_fixture_id: matchForm.apiFixtureId || null
     }]);
     setMatchForm({ team1: "", team2: "", date: "", time: "21:00", odds1: "", oddsX: "", odds2: "", stage: "", apiFixtureId: "" });
     await fetchAllData();
-    triggerToast("✅ Meci adăugat!");
+    triggerToast("✅ Match added!");
   }
 
   async function adminForceResult(mid, res) {
-    if (window.confirm("Override rezultat?")) { await commitMatchResultWithRankSnapshot(mid, res); fetchAllData(); }
+    if (window.confirm("Override the result?")) { await commitMatchResultWithRankSnapshot(mid, res); fetchAllData(); }
+  }
+
+  async function adminSubmitScore(mid) {
+    const d = scoreDrafts[mid] || {};
+    if (d.h === undefined || d.h === "" || d.a === undefined || d.a === "") { alert("Enter both scores"); return; }
+    const h = parseInt(d.h), a = parseInt(d.a);
+    if (isNaN(h) || isNaN(a) || h < 0 || a < 0) { alert("Invalid score"); return; }
+    if (!window.confirm(`Confirm result ${h}–${a}?`)) return;
+    await commitMatchResultWithRankSnapshot(mid, h > a ? "1" : a > h ? "2" : "X", h, a);
+    setScoreDrafts(p => { const c = { ...p }; delete c[mid]; return c; });
+    fetchAllData(); triggerToast("✅ Score saved!");
   }
 
   async function adminRevertResult(mid) {
-    await supabaseClient.from('matches').update({ result: null }).eq('id', mid);
-    fetchAllData(); triggerToast("↩️ Rezultat anulat");
+    await supabaseClient.from('matches').update({ result: null, home_score: null, away_score: null }).eq('id', mid);
+    fetchAllData(); triggerToast("↩️ Result reverted");
   }
 
   async function adminDeleteMatch(mid) {
-    if (window.confirm("Ștergeți meciul?")) { await supabaseClient.from('matches').delete().eq('id', mid); fetchAllData(); }
+    if (window.confirm("Delete this match?")) { await supabaseClient.from('matches').delete().eq('id', mid); fetchAllData(); }
   }
 
   async function adminSaveWinnerConfig(winner) {
     await supabaseClient.from('tournament_config').update({ tournament_winner: winner }).eq('id', 1);
-    fetchAllData(); triggerToast("🏆 Campion setat!");
+    fetchAllData(); triggerToast("🏆 Champion set!");
   }
 
   async function adminSetOddsConfig(team, oddsVal) {
@@ -1036,7 +1109,7 @@ function App() {
         {/* Desktop tab nav */}
         {session && !currentUser?.isAdmin && (
           <div className="topnav-desktop-tabs" style={{ marginLeft: 24, display: 'flex', gap: 4 }}>
-            {[["profile","👤 Profil"],["leaderboard","📊 Clasament"],["matchday","⚽ Meciuri"]].map(([key, label]) => (
+            {[["profile","👤 Profile"],["leaderboard","📊 Leaderboard"],["matchday","⚽ Matches"]].map(([key, label]) => (
               <button key={key} className={`desktop-tab ${page===key?"active":""}`} onClick={() => setPage(key)}>{label}</button>
             ))}
           </div>
@@ -1046,7 +1119,7 @@ function App() {
           {session && (
             <>
               <span className="nav-user">{String(session.username).toUpperCase()}</span>
-              <button className="btn-ghost" onClick={() => { setSession(null); setPage("home"); }}>Ieșire</button>
+              <button className="btn-ghost" onClick={() => { setSession(null); setPage("home"); }}>Log out</button>
             </>
           )}
         </div>
@@ -1056,37 +1129,37 @@ function App() {
       {page === "home" && (
         <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div className="home-hero">
-            <div className="hero-badge">⚽ Sezonul 2026</div>
-            <h1 className="hero-title">PARIURI<br/><span className="accent">WORLD CUP</span></h1>
-            <p className="hero-sub">Prezice meciurile, câștigă puncte pe baza cotelor, și urcă în clasament.</p>
+            <div className="hero-badge">★ USA 2026 ★</div>
+            <h1 className="hero-title">WORLD CUP<br/><span className="accent">PICK 'EM</span></h1>
+            <p className="hero-sub">Predict every match, earn points from the odds, and climb the leaderboard.</p>
           </div>
 
           <div className="container" style={{ maxWidth: 440 }}>
             <div className="card card-pitch">
               <div className="auth-tabs">
-                <button className={`auth-tab ${authMode==="login"?"active":""}`} onClick={() => setAuthMode("login")}>Intră</button>
-                <button className={`auth-tab ${authMode==="register"?"active":""}`} onClick={() => setAuthMode("register")}>Înregistrare</button>
+                <button className={`auth-tab ${authMode==="login"?"active":""}`} onClick={() => setAuthMode("login")}>Log In</button>
+                <button className={`auth-tab ${authMode==="register"?"active":""}`} onClick={() => setAuthMode("register")}>Sign Up</button>
               </div>
 
               {authMode === "login" ? (
                 <div className="flex-col">
-                  <input placeholder="Nume utilizator" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
-                  <input type="password" placeholder="Parolă" className="input" onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
+                  <input placeholder="Username" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
+                  <input type="password" placeholder="Password" className="input" onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
                   {error && <div className="error-text">{error}</div>}
-                  <button className="btn btn-gold btn-block" onClick={runLogin}>INTRĂ ÎN ARENĂ →</button>
+                  <button className="btn btn-gold btn-block" onClick={runLogin}>ENTER THE ARENA →</button>
                 </div>
               ) : (
                 <div className="flex-col">
-                  <input placeholder="Alege un username" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
-                  <input type="password" placeholder="Parolă" className="input" onChange={e => setForm({ ...form, password: e.target.value })} />
+                  <input placeholder="Choose a username" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
+                  <input type="password" placeholder="Password" className="input" onChange={e => setForm({ ...form, password: e.target.value })} />
                   <div className="select-wrap">
                     <select className="input" onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
-                      <option value="">❤️ Echipa favorită</option>
+                      <option value="">❤️ Favorite team</option>
                       {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
                     </select>
                   </div>
                   {error && <div className="error-text">{error}</div>}
-                  <button className="btn btn-gold btn-block" onClick={runRegister}>CREEAZĂ CONT →</button>
+                  <button className="btn btn-gold btn-block" onClick={runRegister}>CREATE ACCOUNT →</button>
                 </div>
               )}
             </div>
@@ -1097,12 +1170,12 @@ function App() {
       {/* ── GATEWAY ── */}
       {page === "gateway" && (
         <div className="gateway-wrap">
-          <div className="hero-badge">⚽ Turneul începe în</div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, marginBottom: 0 }}>ARENA SE DESCHIDE</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>Setează-ți parametrii înainte de primul fluier.</p>
+          <div className="hero-badge">★ KICKOFF IN</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, marginBottom: 0 }}>THE ARENA OPENS</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>Set your picks before the first whistle.</p>
           <div className="countdown-display">{globalTimer}</div>
           <button className="btn btn-gold" style={{ padding: '14px 44px', fontSize: 16 }} onClick={() => setPage("profile")}>
-            INTRĂ ÎN ARENĂ →
+            ENTER THE ARENA →
           </button>
         </div>
       )}
@@ -1124,7 +1197,7 @@ function App() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>RANG</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>RANK</div>
                 <div className="profile-rank">#{myRank || '—'}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                   {(sortedLeaderboard.find(x => x.username.toLowerCase() === currentUser.username.toLowerCase())?.totalPoints || 0).toFixed(2)} pts
@@ -1136,29 +1209,29 @@ function App() {
             <div className="champion-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div>
-                  <div className="section-label">Predicție</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>🏆 Câștigător Turneu</div>
+                  <div className="section-label">Prediction</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>🏆 Tournament Winner</div>
                 </div>
-                {currentUser.isPickLocked && <span className="badge badge-green">BLOCAT 🔒</span>}
+                {currentUser.isPickLocked && <span className="badge badge-green">LOCKED 🔒</span>}
               </div>
               <div className="flex-row">
                 <div className="select-wrap" style={{ flex: 1 }}>
                   <select className="input" value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
-                    <option value="">Selectați echipa...</option>
-                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — cotă {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
+                    <option value="">Select a team…</option>
+                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — odds {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
                   </select>
                 </div>
                 {!currentUser.isPickLocked && !isTournamentBegun && (
-                  <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>BLOCHEAZĂ</button>
+                  <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>LOCK IN</button>
                 )}
               </div>
             </div>
 
             {/* Match history */}
-            <div className="section-label" style={{ marginTop: 20, marginBottom: 12 }}>Istoric Meciuri</div>
+            <div className="section-label" style={{ marginTop: 20, marginBottom: 12 }}>Match History</div>
             {matches.filter(m => m.result).length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '40px 0', fontSize: 14 }}>
-                Rezultatele vor apărea după meciuri.
+                Results will show up here after matches are played.
               </div>
             ) : matches.filter(m => m.result).map(m => {
               const choice = currentUser.picks?.[m.id];
@@ -1168,10 +1241,10 @@ function App() {
                 <div key={m.id} className={`history-row ${isWin ? "win" : choice ? "loss" : "neutral"}`}>
                   <div>
                     <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>
-                      {flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}
+                      {flagEmoji(m.team1)} {m.team1} {(m.home_score != null && m.away_score != null) ? `${m.home_score}–${m.away_score}` : "vs"} {m.team2} {flagEmoji(m.team2)}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                      Rezultat: [{m.result}] · Alegerea ta: [{choice || "–"}]
+                      Result: [{m.result}] · Your pick: [{choice || "–"}]
                     </div>
                   </div>
                   <span className={`badge ${isWin ? "badge-green" : "badge-red"}`}>+{gained} pts</span>
@@ -1187,28 +1260,28 @@ function App() {
             {matchdayMvpNode && (
               <div className="mvp-banner">
                 <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--gold)', textTransform: 'uppercase' }}>
-                  🔥 MVP Etapa {matchdayMvpNode.matchday}
+                  🔥 MATCHDAY {matchdayMvpNode.matchday} MVP
                 </div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 900, color: 'var(--gold)', margin: '4px 0' }}>
                   {String(matchdayMvpNode.username).toUpperCase()}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--white)' }}>
-                  <strong>{matchdayMvpNode.wins}</strong> predicții corecte
+                  <strong>{matchdayMvpNode.wins}</strong> correct picks
                 </div>
               </div>
             )}
 
             <div style={{ marginBottom: 16 }}>
-              <div className="section-label">Sezon 2026</div>
-              <div className="section-title">Clasament Arena</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Puncte cumulative bazate pe cote · Egalitate: nr. victorii</div>
+              <div className="section-label">2026 Season</div>
+              <div className="section-title">Leaderboard</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Points stack up from the odds · Ties broken by total wins</div>
             </div>
 
             {sortedLeaderboard.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '50px 0' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🏟️</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Arena e goală</div>
-                <div style={{ fontSize: 13 }}>Niciun jucător înregistrat încă.</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>The arena is empty</div>
+                <div style={{ fontSize: 13 }}>No players have joined yet.</div>
               </div>
             )}
 
@@ -1235,7 +1308,7 @@ function App() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className="lb-pts">{u.totalPoints.toFixed(2)}</div>
-                    <div className="lb-wins">{u.correctWins} victorii</div>
+                    <div className="lb-wins">{u.correctWins} wins</div>
                   </div>
                 </div>
               );
@@ -1248,15 +1321,15 @@ function App() {
           <div>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
               <div>
-                <div className="section-label">Preziceri</div>
-                <div className="section-title">Meciuri</div>
+                <div className="section-label">Predictions</div>
+                <div className="section-title">Matches</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {isTournamentBegun && (
                   <div className="live-badge"><div className="live-dot"></div>LIVE</div>
                 )}
                 <button
-                  onClick={() => fetchAllData().then(() => triggerToast("🔄 Actualizat!"))}
+                  onClick={() => fetchAllData().then(() => triggerToast("🔄 Updated!"))}
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--muted)', borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.4px' }}
                 >
                   ↻ Refresh
@@ -1267,10 +1340,10 @@ function App() {
             {processedMatchdaySplit.unlocked.length === 0 && processedMatchdaySplit.locked.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🏟️</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--white)' }}>Niciun meci programat</div>
-                <div style={{ fontSize: 13, marginBottom: 16 }}>Adminul nu a adăugat meciuri încă.</div>
-                <button onClick={() => fetchAllData().then(() => triggerToast("🔄 Actualizat!"))} style={{ background: 'var(--gold-dim)', border: '1px solid rgba(240,180,41,0.25)', color: 'var(--gold)', borderRadius: 20, padding: '8px 20px', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.5px' }}>
-                  ↻ Verifică din nou
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--white)' }}>No matches scheduled</div>
+                <div style={{ fontSize: 13, marginBottom: 16 }}>The admin hasn't posted any matches yet.</div>
+                <button onClick={() => fetchAllData().then(() => triggerToast("🔄 Updated!"))} style={{ background: 'var(--gold-dim)', border: '1px solid rgba(245,197,66,0.25)', color: 'var(--gold)', borderRadius: 20, padding: '8px 20px', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.5px' }}>
+                  ↻ Check again
                 </button>
               </div>
             )}
@@ -1281,8 +1354,8 @@ function App() {
               return (
                 <div key={m.id} className="card" style={{ borderLeftColor: 'var(--gold)', borderLeftWidth: 3 }}>
                   <div className="match-header">
-                    <span>Etapa {m.matchday} · {m.match_date}</span>
-                    <span className="badge badge-gold">⏳ DESCHIS</span>
+                    <span>Matchday {m.tournament_stage} · {m.match_date}</span>
+                    <span className="badge badge-gold">⏳ OPEN</span>
                   </div>
                   <div className="match-teams">
                     <div className="match-team">
@@ -1296,7 +1369,7 @@ function App() {
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1","ACASĂ",m.odds1],["X","EGAL",m.oddsx],["2","OASPEȚI",m.odds2]].map(([key,label,odds]) => (
+                    {[["1","HOME",m.odds1],["X","DRAW",m.oddsx],["2","AWAY",m.odds2]].map(([key,label,odds]) => (
                       <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
@@ -1305,11 +1378,11 @@ function App() {
                   </div>
                   <div style={{ marginTop: 12, fontSize: 11, color: 'var(--muted)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span>Distribuție comunitate</span>
+                      <span>Community picks</span>
                       <span style={{ fontWeight: 700 }}>1: {distrib.p1}% · X: {distrib.pX}% · 2: {distrib.p2}%</span>
                     </div>
                     <div className="dist-bar">
-                      <div className="dist-seg" style={{ width: `${distrib.p1}%`, background: 'var(--green)' }}></div>
+                      <div className="dist-seg" style={{ width: `${distrib.p1}%`, background: 'var(--red)' }}></div>
                       <div className="dist-seg" style={{ width: `${distrib.pX}%`, background: 'var(--gold)' }}></div>
                       <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                     </div>
@@ -1319,19 +1392,19 @@ function App() {
             })}
 
             {processedMatchdaySplit.locked.length > 0 && (
-              <div className="section-label" style={{ margin: '16px 0 10px' }}>Predicții blocate</div>
+              <div className="section-label" style={{ margin: '16px 0 10px' }}>Locked picks</div>
             )}
 
             {processedMatchdaySplit.locked.map(m => {
               const distrib = computeGlobalBetDistribution(m.id);
               const sel = currentUser?.picks?.[m.id];
               const matchStarted = new Date(m.match_date + "T" + m.match_time) <= new Date();
-              const lockReason = matchStarted ? '⏱ ÎN JOC' : '🔒 ALES';
+              const lockReason = matchStarted ? '⏱ IN PLAY' : '🔒 PICKED';
               const lockColor = matchStarted ? 'var(--red)' : 'var(--muted)';
               return (
                 <div key={m.id} className="card" style={{ opacity: 0.78 }}>
                   <div className="match-header">
-                    <span>Etapa {m.matchday} · {m.match_date} · {m.match_time}</span>
+                    <span>Matchday {m.tournament_stage} · {m.match_date} · {m.match_time}</span>
                     <span className="badge badge-muted" style={{ color: lockColor }}>{lockReason}</span>
                   </div>
                   <div className="match-teams">
@@ -1346,7 +1419,7 @@ function App() {
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1","ACASĂ",m.odds1],["X","EGAL",m.oddsx],["2","OASPEȚI",m.odds2]].map(([key,label,odds]) => (
+                    {[["1","HOME",m.odds1],["X","DRAW",m.oddsx],["2","AWAY",m.odds2]].map(([key,label,odds]) => (
                       <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
@@ -1354,7 +1427,7 @@ function App() {
                     ))}
                   </div>
                   <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Comunitate</span>
+                    <span>Community</span>
                     <span style={{ fontWeight: 700 }}>1: {distrib.p1}% · X: {distrib.pX}% · 2: {distrib.p2}%</span>
                   </div>
                 </div>
@@ -1367,11 +1440,11 @@ function App() {
         {page === "admin" && currentUser?.isAdmin && (
           <div>
             <div style={{ marginBottom: 20 }}>
-              <div className="section-label">Panou de Control</div>
+              <div className="section-label">Control Panel</div>
               <div className="section-title">Administrator</div>
             </div>
             <div className="admin-tabs">
-              {[["matches","Meciuri"],["results","Rezultate"],["winner","Câștigător"],["players","Jucători"]].map(([key,label]) => (
+              {[["matches","Matches"],["results","Results"],["winner","Champion"],["players","Players"]].map(([key,label]) => (
                 <button key={key} className={`admin-tab ${adminTab===key?"active":""}`} onClick={() => setAdminTab(key)}>{label}</button>
               ))}
             </div>
@@ -1379,36 +1452,41 @@ function App() {
             {adminTab === "matches" && (
               <div>
                 <div className="card card-pitch">
-                  <div className="section-label" style={{ marginBottom: 14 }}>Adaugă Meci</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <div className="section-label" style={{ marginBottom: 0 }}>Add Match</div>
+                    <button className="btn btn-sm" style={{ background: 'var(--gold-dim)', border: '1px solid rgba(245,197,66,0.3)', color: 'var(--gold)', fontSize: 11 }} disabled={importLoading} onClick={adminLoadFixtures}>
+                      {importLoading ? "Loading…" : "📥 Import from API"}
+                    </button>
+                  </div>
                   <div className="grid-2">
                     <div className="select-wrap">
                       <select className="input" value={matchForm.team1} onChange={e=>setMatchForm({...matchForm,team1:e.target.value})}>
-                        <option value="">Echipa Acasă</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
+                        <option value="">Home Team</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
                       </select>
                     </div>
                     <div className="select-wrap">
                       <select className="input" value={matchForm.team2} onChange={e=>setMatchForm({...matchForm,team2:e.target.value})}>
-                        <option value="">Echipa Oaspeți</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
+                        <option value="">Away Team</option>{TEAMS.map(t=><option key={t}>{t}</option>)}
                       </select>
                     </div>
                     <input type="date" className="input" value={matchForm.date} onChange={e=>setMatchForm({...matchForm,date:e.target.value})} />
                     <input type="time" className="input" value={matchForm.time} onChange={e=>setMatchForm({...matchForm,time:e.target.value})} />
-                    <input type="number" step="0.01" placeholder="Cotă 1" className="input" value={matchForm.odds1} onChange={e=>setMatchForm({...matchForm,odds1:e.target.value})} />
-                    <input type="number" step="0.01" placeholder="Cotă X" className="input" value={matchForm.oddsX} onChange={e=>setMatchForm({...matchForm,oddsX:e.target.value})} />
-                    <input type="number" step="0.01" placeholder="Cotă 2" className="input" value={matchForm.odds2} onChange={e=>setMatchForm({...matchForm,odds2:e.target.value})} />
-                    <input placeholder="Nr. Etapă" className="input" value={matchForm.stage} onChange={e=>setMatchForm({...matchForm,stage:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Odds 1" className="input" value={matchForm.odds1} onChange={e=>setMatchForm({...matchForm,odds1:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Odds X" className="input" value={matchForm.oddsX} onChange={e=>setMatchForm({...matchForm,oddsX:e.target.value})} />
+                    <input type="number" step="0.01" placeholder="Odds 2" className="input" value={matchForm.odds2} onChange={e=>setMatchForm({...matchForm,odds2:e.target.value})} />
+                    <input placeholder="Matchday no." className="input" value={matchForm.stage} onChange={e=>setMatchForm({...matchForm,stage:e.target.value})} />
                   </div>
-                  <input placeholder="API Fixture ID (opțional)" className="input" style={{ marginTop: 10 }} value={matchForm.apiFixtureId} onChange={e=>setMatchForm({...matchForm,apiFixtureId:e.target.value})} />
-                  <button className="btn btn-gold btn-block" style={{ marginTop: 14 }} onClick={adminCreateMatch}>+ ADAUGĂ MECI</button>
+                  <input placeholder="API Fixture ID (optional)" className="input" style={{ marginTop: 10 }} value={matchForm.apiFixtureId} onChange={e=>setMatchForm({...matchForm,apiFixtureId:e.target.value})} />
+                  <button className="btn btn-gold btn-block" style={{ marginTop: 14 }} onClick={adminCreateMatch}>+ ADD MATCH</button>
                 </div>
 
-                <div className="section-label" style={{ margin: '20px 0 10px' }}>Meciuri Programate</div>
+                <div className="section-label" style={{ margin: '20px 0 10px' }}>Scheduled Matches</div>
                 {matches.sort((a,b) => new Date(a.match_date)-new Date(b.match_date)).map(m => (
                   <div key={m.id} className="admin-match-row">
                     <div>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                        {m.match_date} · Cote: {m.odds1} / {m.oddsx} / {m.odds2}
+                        {m.match_date} · Odds: {m.odds1} / {m.oddsx} / {m.odds2}
                         {m.api_fixture_id && ` · API: ${m.api_fixture_id}`}
                       </div>
                     </div>
@@ -1421,20 +1499,30 @@ function App() {
             {adminTab === "results" && (
               <div>
                 <div className="card card-gold" style={{ marginBottom: 20 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, marginBottom: 6 }}>Sincronizare Automată API</div>
-                  <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>Preia rezultatele de la API-Football și actualizează clasamentul.</p>
-                  <button className="btn btn-gold btn-block" onClick={adminFetchLiveResults}>🔄 RULEAZĂ SINCRONIZAREA</button>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, marginBottom: 6 }}>Automatic API Sync</div>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>Pulls results from football-data.org and updates the leaderboard.</p>
+                  <button className="btn btn-gold btn-block" onClick={adminFetchLiveResults}>🔄 RUN SYNC NOW</button>
                 </div>
 
-                <div className="section-label" style={{ marginBottom: 10 }}>Override Manual</div>
+                <div className="section-label" style={{ marginBottom: 10 }}>Manual Override</div>
                 {matches.map(m => (
                   <div key={m.id} className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
-                      {m.result ? <span className="result-pill">✓ {m.result}</span> : <span className="badge badge-muted">Pending</span>}
+                      {m.result ? <span className="result-pill">✓ {m.result}{(m.home_score != null && m.away_score != null) ? ` · ${m.home_score}–${m.away_score}` : ""}</span> : <span className="badge badge-muted">Pending</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+                      <input type="number" min="0" placeholder="Home" className="input" style={{ flex: 1, padding: '7px 10px', fontSize: 13 }}
+                        value={scoreDrafts[m.id]?.h ?? (m.home_score != null ? m.home_score : "")}
+                        onChange={e => setScoreDrafts(p => ({ ...p, [m.id]: { ...p[m.id], h: e.target.value } }))} />
+                      <span style={{ color: 'var(--muted)', fontWeight: 800 }}>–</span>
+                      <input type="number" min="0" placeholder="Away" className="input" style={{ flex: 1, padding: '7px 10px', fontSize: 13 }}
+                        value={scoreDrafts[m.id]?.a ?? (m.away_score != null ? m.away_score : "")}
+                        onChange={e => setScoreDrafts(p => ({ ...p, [m.id]: { ...p[m.id], a: e.target.value } }))} />
+                      <button className="btn btn-gold btn-sm" style={{ fontSize: 11 }} onClick={() => adminSubmitScore(m.id)}>Save score</button>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      {[["1","Acasă"],["X","Egal"],["2","Oaspeți"]].map(([key,label]) => (
+                      {[["1","Home"],["X","Draw"],["2","Away"]].map(([key,label]) => (
                         <button key={key} className="btn btn-sm" style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 11 }} onClick={() => adminForceResult(m.id, key)}>{label} ({key})</button>
                       ))}
                       {m.result && <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--muted)', fontSize: 11 }} onClick={() => adminRevertResult(m.id)}>↩</button>}
@@ -1447,16 +1535,16 @@ function App() {
 
             {adminTab === "winner" && (
               <div className="card card-gold">
-                <div className="section-label" style={{ marginBottom: 8 }}>Turneu Final</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 16 }}>🏆 Campion Mondial</div>
+                <div className="section-label" style={{ marginBottom: 8 }}>Final Stage</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 16 }}>🏆 World Champion</div>
                 <div className="select-wrap" style={{ marginBottom: 20 }}>
                   <select className="input" value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
-                    <option value="">— Turneu activ —</option>
+                    <option value="">— Tournament ongoing —</option>
                     {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
                   </select>
                 </div>
 
-                <div className="section-label" style={{ marginBottom: 12 }}>Cote Campion per Echipă</div>
+                <div className="section-label" style={{ marginBottom: 12 }}>Champion Odds per Team</div>
                 <div className="grid-2">
                   {TEAMS.map(t => (
                     <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.02)', padding: '7px 10px', borderRadius: 8 }}>
@@ -1470,7 +1558,7 @@ function App() {
 
             {adminTab === "players" && (
               <div>
-                <div className="section-label" style={{ marginBottom: 12 }}>Toți Jucătorii</div>
+                <div className="section-label" style={{ marginBottom: 12 }}>All Players</div>
                 {Object.keys(users).map(k => {
                   const u = users[k];
                   return (
@@ -1480,12 +1568,12 @@ function App() {
                           {String(u.username)} {u.isAdmin && <span className="badge badge-gold" style={{ fontSize: 10 }}>Admin</span>}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                          {flagEmoji(u.favoriteTeam)} {u.favoriteTeam} · Campion: {u.tournamentWinnerPick || "Neselectat"}
+                          {flagEmoji(u.favoriteTeam)} {u.favoriteTeam} · Champion: {u.tournamentWinnerPick || "Not picked"}
                         </div>
                       </div>
                       {!u.isAdmin && (
                         <button className="btn btn-danger btn-sm" onClick={async () => {
-                          if (window.confirm("Ștergeți contul?")) {
+                          if (window.confirm("Delete this account?")) {
                             await supabaseClient.from('profiles').delete().eq('username', u.username);
                             fetchAllData();
                           }
@@ -1504,7 +1592,7 @@ function App() {
       {/* ── BOTTOM NAV (mobile) ── */}
       {session && !currentUser?.isAdmin && (
         <div className="bottom-nav">
-          {[["profile","👤","Profil"],["leaderboard","📊","Clasament"],["matchday","⚽","Meciuri"]].map(([key, icon, label]) => (
+          {[["profile","👤","Profile"],["leaderboard","📊","Leaderboard"],["matchday","⚽","Matches"]].map(([key, icon, label]) => (
             <button key={key} className={`nav-btn ${page===key?"active":""}`} onClick={() => setPage(key)}>
               <span className="nav-btn-icon">{icon}</span>
               <span>{label}</span>
@@ -1520,37 +1608,37 @@ function App() {
             <div className="modal-handle"></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <div className="section-label">Profil</div>
+                <div className="section-label">Profile</div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900 }}>{String(inspectUser.username).toUpperCase()}</div>
               </div>
               <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setInspectUser(null)}>✕</button>
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: 8, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 13 }}><strong>Echipă favorită:</strong> {flagEmoji(inspectUser.favoriteTeam)} {String(inspectUser.favoriteTeam)}</div>
+              <div style={{ fontSize: 13 }}><strong>Favorite team:</strong> {flagEmoji(inspectUser.favoriteTeam)} {String(inspectUser.favoriteTeam)}</div>
               <div style={{ fontSize: 13 }}>
-                <strong>Predicție campion:</strong>{" "}
-                {(isTournamentBegun || inspectUser.isPickLocked || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                  ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick || "Neselectat"}`
-                  : "🔒 Ascuns până la start"
+                <strong>Champion pick:</strong>{" "}
+                {(isTournamentBegun || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
+                  ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick || "Not picked"}`
+                  : "🔒 Hidden until kickoff"
                 }
                 {inspectUser.isPickLocked && " 🔒"}
               </div>
             </div>
 
-            <div className="section-label" style={{ marginBottom: 10 }}>Istoric Selecții</div>
+            <div className="section-label" style={{ marginBottom: 10 }}>Pick History</div>
             {matches.map(m => {
               const choice = inspectUser.picks?.[m.id];
               const matchClosed = m.result || new Date(m.match_date+"T"+m.match_time) <= new Date();
               const visible = (matchClosed || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                ? (choice ? `[${choice}]` : "– Nicio predicție") : "🔒 Ascuns";
+                ? (choice ? `[${choice}]` : "– No pick") : "🔒 Hidden";
               let variant = "muted";
               if (m.result && choice) variant = choice === m.result ? "green" : "danger";
               return (
                 <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div>
                     <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{m.team1} vs {m.team2}</div>
-                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· Rezultat: ${m.result}`}</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· Result: ${m.result}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
                   </div>
                   <span className={`badge badge-${variant}`}>{visible}</span>
                 </div>
@@ -1567,7 +1655,7 @@ function App() {
             <div className="modal-handle"></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <div className="section-label">Audit Pariuri</div>
+                <div className="section-label">Bet Audit</div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 900 }}>{inspectMatchBets.team1} vs {inspectMatchBets.team2}</div>
               </div>
               <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setInspectMatchBets(null)}>✕</button>
@@ -1582,6 +1670,44 @@ function App() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── IMPORT FIXTURES MODAL ── */}
+      {importOpen && (
+        <div className="modal-overlay" onClick={() => setImportOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle"></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div>
+                <div className="section-label">API Schedule</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 900 }}>Import a match</div>
+              </div>
+              <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setImportOpen(false)}>✕</button>
+            </div>
+            <input className="input" placeholder="🔎 Search team…" value={importFilter} onChange={e => setImportFilter(e.target.value)} style={{ marginBottom: 12 }} />
+            {apiFixtures.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '30px 0', fontSize: 13 }}>No matches returned by the API.</div>
+            )}
+            {apiFixtures
+              .filter(fx => !importFilter || `${fx.home} ${fx.away}`.toLowerCase().includes(importFilter.toLowerCase()))
+              .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
+              .map(fx => {
+                const t1 = apiTeamToApp(fx.home), t2 = apiTeamToApp(fx.away);
+                const already = matches.some(m => String(m.api_fixture_id) === String(fx.id));
+                const d = new Date(fx.utcDate);
+                return (
+                  <div key={fx.id} onClick={() => adminPickFixture(fx)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', opacity: already ? 0.5 : 1 }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>{flagEmoji(t1)} {t1} vs {t2} {flagEmoji(t2)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{d.toLocaleString()} · ID {fx.id}</div>
+                    </div>
+                    {already ? <span className="badge badge-muted">Added</span> : <span className="badge badge-gold">+ Pick</span>}
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}
