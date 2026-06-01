@@ -312,8 +312,17 @@ input, select, button, textarea { font-family: var(--font-body); }
 .pick-btn.selected-2 .pick-btn-odds, .pick-btn.selected-2 .pick-btn-label { color: var(--blue); }
 
 /* DISTRIBUTION BAR */
-.dist-bar { height: 4px; border-radius: 2px; overflow: hidden; background: rgba(255,255,255,0.05); display: flex; margin-top: 10px; }
+.dist-bar { height: 7px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.06); display: flex; }
 .dist-seg { height: 100%; transition: width 0.4s ease; }
+
+/* COMMUNITY VOTE block */
+.community { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+.community-head {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px;
+}
+.community-legend { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; font-weight: 700; }
+.community-empty { font-size: 12px; color: var(--muted); font-style: italic; }
 
 /* TOAST */
 .toast {
@@ -415,22 +424,71 @@ input, select, button, textarea { font-family: var(--font-body); }
   background: linear-gradient(135deg, rgba(24,36,79,0.95) 0%, rgba(16,25,63,0.95) 100%);
   border: 1px solid rgba(245,197,66,0.2);
   border-radius: var(--radius);
-  padding: 22px 20px;
+  padding: 26px 20px 22px;
   margin-bottom: 12px;
-  display: flex; align-items: center; gap: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  text-align: center;
 }
 .profile-avatar {
-  width: 56px; height: 56px;
+  width: 66px; height: 66px;
   background: linear-gradient(135deg, var(--gold), #b8860b);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-size: 22px; font-weight: 900;
+  font-size: 28px; font-weight: 900;
   color: #0a1230;
   flex-shrink: 0;
+  box-shadow: 0 6px 20px rgba(245,197,66,0.25);
 }
-.profile-name { font-family: var(--font-display); font-size: 26px; font-weight: 900; line-height: 1; }
+.profile-name { font-family: var(--font-display); font-size: 28px; font-weight: 900; line-height: 1; }
 .profile-rank { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: var(--gold); }
+.stat-row { display: flex; gap: 10px; width: 100%; margin-top: 6px; }
+.stat-box {
+  flex: 1; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 10px;
+  padding: 12px 8px;
+}
+.stat-label { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.stat-value { font-family: var(--font-display); font-size: 24px; font-weight: 900; line-height: 1; }
+.stat-value.gold { color: var(--gold); }
+
+/* CHAMPION bonus message */
+.champion-msg {
+  font-size: 12.5px; line-height: 1.5; color: var(--white);
+  background: rgba(245,197,66,0.08);
+  border: 1px solid rgba(245,197,66,0.18);
+  border-radius: 10px; padding: 10px 12px;
+}
+
+/* STREAK panels (hot / cold) */
+.streak-panel {
+  border-radius: var(--radius);
+  padding: 12px 14px 6px;
+  margin-bottom: 12px;
+  border: 1px solid transparent;
+}
+.streak-panel.hot {
+  background: linear-gradient(135deg, rgba(226,59,78,0.16) 0%, rgba(245,140,40,0.12) 100%);
+  border-color: rgba(245,120,40,0.4);
+}
+.streak-panel.cold {
+  background: linear-gradient(135deg, rgba(59,123,255,0.14) 0%, rgba(120,200,255,0.1) 100%);
+  border-color: rgba(120,180,255,0.35);
+}
+.streak-head {
+  font-family: var(--font-display); font-weight: 800; font-size: 12px;
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+}
+.streak-panel.hot .streak-head { color: #ff9d5c; }
+.streak-panel.cold .streak-head { color: #8fc2ff; }
+.streak-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-top: 1px solid rgba(255,255,255,0.06);
+}
+.streak-name { font-family: var(--font-display); font-weight: 800; font-size: 15px; }
+.streak-tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.streak-tag.hot { background: rgba(245,120,40,0.2); color: #ff9d5c; }
+.streak-tag.cold { background: rgba(120,180,255,0.18); color: #8fc2ff; }
 
 /* HOME / AUTH */
 .home-hero {
@@ -834,6 +892,7 @@ function App() {
               tournamentWinnerPick: u.tournament_winner_pick ? String(u.tournament_winner_pick) : null,
               isPickLocked: u.is_pick_locked || false,
               picks: u.picks && typeof u.picks === 'object' ? u.picks : {},
+              pickTimes: u.pick_times && typeof u.pick_times === 'object' ? u.pick_times : {},
               previousRank: u.previous_rank || 0
             };
           }
@@ -889,37 +948,57 @@ function App() {
 
   const currentUser = (session && users[session.username.toLowerCase()]) ? users[session.username.toLowerCase()] : null;
 
+  // Finished matches in chronological order (by kickoff) — used for scoring, the
+  // lock-lead tiebreaker, and streaks.
+  const finishedChrono = useMemo(() =>
+    matches.filter(m => m.result).sort((a, b) =>
+      new Date(a.match_date + "T" + a.match_time) - new Date(b.match_date + "T" + b.match_time)
+    ), [matches]);
+
   const sortedLeaderboard = useMemo(() => {
+    const finishedCount = finishedChrono.length;
     return Object.values(users).filter(u => !u.isAdmin).map(u => {
-      let pts = 0, correctWins = 0;
-      matches.forEach(m => {
-        if (m.result && u.picks && u.picks[m.id] === m.result) {
+      let pts = 0, correctWins = 0, leadSum = 0;
+      finishedChrono.forEach(m => {
+        const pick = u.picks?.[m.id];
+        if (pick === m.result) {
           correctWins++;
           pts += parseFloat(m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2) || 0;
+        }
+        // Lock-lead = minutes between locking the pick and kickoff. No pick / no
+        // timestamp = 0 (worst), matching the "auto-lock at kickoff" rule.
+        const t = u.pickTimes?.[m.id];
+        if (pick && t) {
+          const lead = (new Date(m.match_date + "T" + m.match_time) - new Date(t)) / 60000;
+          if (lead > 0) leadSum += lead;
         }
       });
       if (tournamentConfig.tournament_winner && u.tournamentWinnerPick === tournamentConfig.tournament_winner)
         pts += parseFloat(tournamentConfig.champion_odds[tournamentConfig.tournament_winner]) || 0;
-      return { ...u, totalPoints: Math.round(pts * 100) / 100, correctWins };
-    }).sort((a, b) => b.totalPoints - a.totalPoints || b.correctWins - a.correctWins);
-  }, [users, matches, tournamentConfig]);
+      const avgLeadMin = finishedCount ? Math.round(leadSum / finishedCount) : 0;
+      return { ...u, totalPoints: Math.round(pts * 100) / 100, correctWins, avgLeadMin };
+    }).sort((a, b) => b.totalPoints - a.totalPoints || b.correctWins - a.correctWins || b.avgLeadMin - a.avgLeadMin);
+  }, [users, finishedChrono, tournamentConfig]);
 
-  const matchdayMvpNode = useMemo(() => {
-    const mds = [...new Set(matches.filter(m => m.result).map(m => parseInt(m.tournament_stage) || 1))];
-    if (!mds.length) return null;
-    const latestMD = Math.max(...mds);
-    const scores = Object.values(users).filter(u => !u.isAdmin).map(u => {
-      let mdWins = 0, mdPts = 0;
-      matches.filter(m => parseInt(m.tournament_stage) === latestMD && m.result).forEach(m => {
-        if (u.picks?.[m.id] === m.result) {
-          mdWins++;
-          mdPts += parseFloat(m.result === "1" ? m.odds1 : m.result === "X" ? m.oddsx : m.odds2) || 0;
-        }
+  // Hot (4+ correct in a row) and Cold (5+ wrong in a row) streaks, on each player's
+  // current trailing run over the matches they picked (ignoring ones they skipped).
+  const { hotPlayers, coldPlayers } = useMemo(() => {
+    const hot = [], cold = [];
+    Object.values(users).filter(u => !u.isAdmin).forEach(u => {
+      let run = 0, runType = null;
+      finishedChrono.forEach(m => {
+        const pick = u.picks?.[m.id];
+        if (!pick) return;
+        const type = pick === m.result ? 'W' : 'L';
+        if (type === runType) run++; else { runType = type; run = 1; }
       });
-      return { username: u.username, mdWins, mdPts };
-    }).sort((a, b) => b.mdWins - a.mdWins || b.mdPts - a.mdPts);
-    return (scores[0] && scores[0].mdWins > 0) ? { matchday: latestMD, username: scores[0].username, wins: scores[0].mdWins } : null;
-  }, [users, matches]);
+      if (runType === 'W' && run >= 4) hot.push({ username: u.username, streak: run });
+      if (runType === 'L' && run >= 5) cold.push({ username: u.username, streak: run });
+    });
+    hot.sort((a, b) => b.streak - a.streak);
+    cold.sort((a, b) => b.streak - a.streak);
+    return { hotPlayers: hot, coldPlayers: cold };
+  }, [users, finishedChrono]);
 
   async function runLogin() {
     if (!form.username || !form.password) { setError("Please fill in all fields"); return; }
@@ -967,7 +1046,12 @@ function App() {
     const localUpdated = { ...(currentUser.picks || {}), [matchId]: outcome };
     const { error: updateErr } = await supabaseClient.from('profiles').update({ picks: localUpdated }).eq('username', currentUser.username);
     if (updateErr) { triggerToast("❌ Sync error"); return; }
-    setUsers(prev => ({ ...prev, [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated } }));
+    // Record when this pick was locked, for the speed tiebreaker. Best-effort: works
+    // once the optional `pick_times` column exists (see supabase/sql/add_pick_times.sql),
+    // and is silently ignored if it doesn't — so picks always save either way.
+    const localTimes = { ...(currentUser.pickTimes || {}), [matchId]: new Date().toISOString() };
+    await supabaseClient.from('profiles').update({ pick_times: localTimes }).eq('username', currentUser.username);
+    setUsers(prev => ({ ...prev, [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated, pickTimes: localTimes } }));
     triggerToast("⚽ Pick saved!");
   }
 
@@ -1197,35 +1281,30 @@ function App() {
         {/* ── PROFILE ── */}
         {page === "profile" && currentUser && (
           <div>
-            {/* Hero Card */}
+            {/* Hero Card — centered */}
             <div className="profile-hero">
               <div className="profile-avatar">{String(currentUser.username)[0].toUpperCase()}</div>
-              <div style={{ flex: 1 }}>
-                <div className="section-label">Contender</div>
-                <div className="profile-name">{String(currentUser.username).toUpperCase()}</div>
-                <div style={{ marginTop: 6 }}>
-                  <span className="badge badge-gold">{flagEmoji(currentUser.favoriteTeam)} {currentUser.favoriteTeam}</span>
+              <div className="profile-name">{String(currentUser.username).toUpperCase()}</div>
+              <span className="badge badge-gold">{flagEmoji(currentUser.favoriteTeam)} {currentUser.favoriteTeam}</span>
+              <div className="stat-row">
+                <div className="stat-box">
+                  <div className="stat-label">Rank</div>
+                  <div className="stat-value gold">#{myRank || '—'}</div>
                 </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>RANK</div>
-                <div className="profile-rank">#{myRank || '—'}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  {(sortedLeaderboard.find(x => x.username.toLowerCase() === currentUser.username.toLowerCase())?.totalPoints || 0).toFixed(2)} pts
+                <div className="stat-box">
+                  <div className="stat-label">Points</div>
+                  <div className="stat-value">{(sortedLeaderboard.find(x => x.username.toLowerCase() === currentUser.username.toLowerCase())?.totalPoints || 0).toFixed(2)}</div>
                 </div>
               </div>
             </div>
 
             {/* Champion Pick */}
             <div className="champion-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div>
-                  <div className="section-label">Prediction</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>🏆 Tournament Winner</div>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>🏆 Pick the Champion</div>
                 {currentUser.isPickLocked && <span className="badge badge-green">LOCKED 🔒</span>}
               </div>
-              <div className="flex-row">
+              <div className="flex-row" style={{ marginBottom: 12 }}>
                 <div className="select-wrap" style={{ flex: 1 }}>
                   <select className="input" value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
                     <option value="">Select a team…</option>
@@ -1235,6 +1314,12 @@ function App() {
                 {!currentUser.isPickLocked && !isTournamentBegun && (
                   <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>LOCK IN</button>
                 )}
+              </div>
+              <div className="champion-msg">
+                {currentUser.tournamentWinnerPick
+                  ? <>🎯 If <strong>{currentUser.tournamentWinnerPick}</strong> win the World Cup, you’ll earn <strong>+{tournamentConfig.champion_odds[currentUser.tournamentWinnerPick] || "10.0"} bonus points</strong> at the end.</>
+                  : "Pick who you think wins the World Cup — a correct call adds big bonus points to your total at the end."}
+                {!currentUser.isPickLocked && !isTournamentBegun && <div style={{ marginTop: 4, opacity: 0.7 }}>Lock it in to set it in stone (and keep it secret until kickoff).</div>}
               </div>
             </div>
 
@@ -1268,25 +1353,32 @@ function App() {
         {/* ── LEADERBOARD ── */}
         {page === "leaderboard" && (
           <div>
-            {matchdayMvpNode && (
-              <div className="mvp-banner">
-                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--gold)', textTransform: 'uppercase' }}>
-                  🔥 MATCHDAY {matchdayMvpNode.matchday} MVP
-                </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 900, color: 'var(--gold)', margin: '4px 0' }}>
-                  {String(matchdayMvpNode.username).toUpperCase()}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--white)' }}>
-                  <strong>{matchdayMvpNode.wins}</strong> correct picks
-                </div>
+            <div className="section-title" style={{ marginBottom: 4 }}>Leaderboard</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 16 }}>Ranked by points · ties broken by wins, then who locked in earliest</div>
+
+            {hotPlayers.length > 0 && (
+              <div className="streak-panel hot">
+                <div className="streak-head">🔥 On Fire — watch out</div>
+                {hotPlayers.map(p => (
+                  <div key={p.username} className="streak-row">
+                    <span className="streak-name">{String(p.username).toUpperCase()}</span>
+                    <span className="streak-tag hot">{p.streak} in a row</span>
+                  </div>
+                ))}
               </div>
             )}
 
-            <div style={{ marginBottom: 16 }}>
-              <div className="section-label">2026 Season</div>
-              <div className="section-title">Leaderboard</div>
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Points stack up from the odds · Ties broken by total wins</div>
-            </div>
+            {coldPlayers.length > 0 && (
+              <div className="streak-panel cold">
+                <div className="streak-head">🧊 Ice Cold — rough patch</div>
+                {coldPlayers.map(p => (
+                  <div key={p.username} className="streak-row">
+                    <span className="streak-name">{String(p.username).toUpperCase()}</span>
+                    <span className="streak-tag cold">{p.streak} misses in a row</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {sortedLeaderboard.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '50px 0' }}>
@@ -1300,9 +1392,8 @@ function App() {
               const rank = i + 1;
               const prev = u.previousRank || rank;
               const delta = prev - rank;
-              const isMvp = matchdayMvpNode && String(matchdayMvpNode.username).toLowerCase() === String(u.username).toLowerCase();
               return (
-                <div key={u.username} className={`lb-row ${isMvp ? "gold-row" : ""}`} onClick={() => setInspectUser(u)}>
+                <div key={u.username} className="lb-row" onClick={() => setInspectUser(u)}>
                   <div style={{ minWidth: 44, textAlign: 'center' }}>
                     <div className={`lb-rank-num ${rank <= 3 ? "top3" : ""}`}>
                       {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
@@ -1313,13 +1404,12 @@ function App() {
                       </div>
                     )}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div className="lb-name">{String(u.username).toUpperCase()} {isMvp && "👑"}</div>
-                    <div className="lb-sub">{flagEmoji(u.favoriteTeam)} {u.favoriteTeam}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="lb-name">{String(u.username).toUpperCase()}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className="lb-pts">{u.totalPoints.toFixed(2)}</div>
-                    <div className="lb-wins">{u.correctWins} wins</div>
+                    <div className="lb-wins">{u.correctWins} {u.correctWins === 1 ? "win" : "wins"}</div>
                   </div>
                 </div>
               );
@@ -1387,16 +1477,24 @@ function App() {
                       </button>
                     ))}
                   </div>
-                  <div style={{ marginTop: 12, fontSize: 11, color: 'var(--muted)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span>Community picks</span>
-                      <span style={{ fontWeight: 700 }}>1: {distrib.p1}% · X: {distrib.pX}% · 2: {distrib.p2}%</span>
-                    </div>
-                    <div className="dist-bar">
-                      <div className="dist-seg" style={{ width: `${distrib.p1}%`, background: 'var(--red)' }}></div>
-                      <div className="dist-seg" style={{ width: `${distrib.pX}%`, background: 'var(--gold)' }}></div>
-                      <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
-                    </div>
+                  <div className="community">
+                    <div className="community-head">Community votes</div>
+                    {(distrib.p1 + distrib.pX + distrib.p2) === 0 ? (
+                      <div className="community-empty">Be the first to call this one</div>
+                    ) : (
+                      <>
+                        <div className="dist-bar">
+                          <div className="dist-seg" style={{ width: `${distrib.p1}%`, background: 'var(--red)' }}></div>
+                          <div className="dist-seg" style={{ width: `${distrib.pX}%`, background: 'var(--gold)' }}></div>
+                          <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
+                        </div>
+                        <div className="community-legend">
+                          <span style={{ color: 'var(--red)' }}>HOME {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>DRAW {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>AWAY {distrib.p2}%</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -1437,9 +1535,24 @@ function App() {
                       </button>
                     ))}
                   </div>
-                  <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Community</span>
-                    <span style={{ fontWeight: 700 }}>1: {distrib.p1}% · X: {distrib.pX}% · 2: {distrib.p2}%</span>
+                  <div className="community">
+                    <div className="community-head">Community votes</div>
+                    {(distrib.p1 + distrib.pX + distrib.p2) === 0 ? (
+                      <div className="community-empty">No votes yet</div>
+                    ) : (
+                      <>
+                        <div className="dist-bar">
+                          <div className="dist-seg" style={{ width: `${distrib.p1}%`, background: 'var(--red)' }}></div>
+                          <div className="dist-seg" style={{ width: `${distrib.pX}%`, background: 'var(--gold)' }}></div>
+                          <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
+                        </div>
+                        <div className="community-legend">
+                          <span style={{ color: 'var(--red)' }}>HOME {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>DRAW {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>AWAY {distrib.p2}%</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
