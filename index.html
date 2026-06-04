@@ -148,6 +148,15 @@ input, select, button, textarea { font-family: var(--font-body); }
 }
 .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
 
+/* Language toggle (EN / RO) */
+.lang-toggle { display: inline-flex; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; overflow: hidden; }
+.lang-toggle button {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font-family: var(--font-display); font-weight: 800;
+  font-size: 11px; letter-spacing: 0.5px; padding: 5px 10px;
+}
+.lang-toggle button.active { background: var(--gold); color: #0a1230; }
+
 /* BOTTOM NAV */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
@@ -267,6 +276,8 @@ input, select, button, textarea { font-family: var(--font-body); }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .btn:active { transform: translateY(1px) scale(0.99); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; filter: none; }
+.btn:disabled:active { transform: none; }
 .btn-gold { background: linear-gradient(135deg, #ffce4a, #eaa90f); color: #0a1230; box-shadow: 0 6px 18px rgba(245,197,66,0.28); }
 .btn-gold:hover { filter: brightness(1.06); box-shadow: 0 8px 22px rgba(245,197,66,0.36); }
 .btn-danger { background: rgba(226,59,78,0.15); color: var(--red); border: 1px solid rgba(226,59,78,0.3); }
@@ -302,6 +313,8 @@ input, select, button, textarea { font-family: var(--font-body); }
   transition: all 0.15s;
 }
 .pick-btn:active { transform: scale(0.96); }
+.pick-btn.locked { cursor: default; }
+.pick-btn.locked:active { transform: none; }
 .pick-btn-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; }
 .pick-btn-odds { font-family: var(--font-display); font-size: 18px; font-weight: 900; color: var(--white); }
 .pick-btn.selected-1 { background: rgba(226,59,78,0.16); border-color: var(--red); }
@@ -876,6 +889,11 @@ function App() {
   const [importLoading, setImportLoading] = useState(false);
   const [apiFixtures, setApiFixtures] = useState([]);
   const [importFilter, setImportFilter] = useState("");
+  const [lang, setLang] = useState(() => { try { return localStorage.getItem("pariuri_lang") || "en"; } catch { return "en"; } });
+  // Tiny i18n helper: tr("English", "Română"). Falls back to English if no translation given.
+  // (Named `tr` because `t` is used as the team loop variable in TEAMS.map(t => ...).)
+  const tr = (en, ro) => (lang === "ro" && ro != null) ? ro : en;
+  function switchLang(l) { setLang(l); try { localStorage.setItem("pariuri_lang", l); } catch {} }
 
   async function fetchAllData() {
     try {
@@ -932,17 +950,17 @@ function App() {
   useEffect(() => {
     function computeTimer() {
       const remaining = WORLD_CUP_KICKOFF - new Date();
-      if (remaining <= 0) { setIsTournamentBegun(true); setGlobalTimer("LIVE"); return; }
+      if (remaining <= 0) { setIsTournamentBegun(true); setGlobalTimer(tr("LIVE","ÎN DIRECT")); return; }
       const days = Math.floor(remaining / 86400000);
       const hours = Math.floor((remaining % 86400000) / 3600000);
       const minutes = Math.floor((remaining % 3600000) / 60000);
       const seconds = Math.floor((remaining % 60000) / 1000);
-      setGlobalTimer(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      setGlobalTimer(`${days}${tr("d","z")} ${hours}h ${minutes}m ${seconds}s`);
     }
     computeTimer();
     const id = setInterval(computeTimer, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [lang]);
 
   function triggerToast(msg) { setToast(msg); setTimeout(() => setToast(""), 2800); }
 
@@ -1001,10 +1019,10 @@ function App() {
   }, [users, finishedChrono]);
 
   async function runLogin() {
-    if (!form.username || !form.password) { setError("Please fill in all fields"); return; }
+    if (!form.username || !form.password) { setError(tr("Please fill in all fields","Completați toate câmpurile")); return; }
     const normalized = form.username.trim().toLowerCase();
     const target = users[normalized];
-    if (!target) { setError("Invalid login details"); return; }
+    if (!target) { setError(tr("Invalid login details","Date de autentificare invalide")); return; }
     setError("");
     // Primary: credentials live in Supabase Auth, not in a DB column.
     const { error: authErr } = await supabaseClient.auth.signInWithPassword({
@@ -1014,18 +1032,18 @@ function App() {
     // Transitional fallback for legacy accounts whose plaintext password predates the
     // Auth migration. Goes inert once `password` is blanked in the DB (see setup SQL).
     if (target.password && target.password === form.password) { setSession({ username: target.username }); return; }
-    setError("Invalid login details");
+    setError(tr("Invalid login details","Date de autentificare invalide"));
   }
 
   async function runRegister() {
-    if (!form.username || !form.password || !form.favoriteTeam) { setError("Please fill in all fields"); return; }
+    if (!form.username || !form.password || !form.favoriteTeam) { setError(tr("Please fill in all fields","Completați toate câmpurile")); return; }
     const normalized = form.username.trim().toLowerCase();
-    if (!/^[a-z0-9_.-]{2,20}$/.test(normalized)) { setError("Username: 2–20 characters, only letters, numbers and _ . -"); return; }
-    if (form.password.length < 6) { setError("Password must be at least 6 characters"); return; }
-    if (users[normalized]) { setError("Username already taken"); return; }
+    if (!/^[a-z0-9_.-]{2,20}$/.test(normalized)) { setError(tr("Username: 2–20 characters, only letters, numbers and _ . -","Nume utilizator: 2–20 caractere, doar litere, cifre și _ . -")); return; }
+    if (form.password.length < 6) { setError(tr("Password must be at least 6 characters","Parola trebuie să aibă minim 6 caractere")); return; }
+    if (users[normalized]) { setError(tr("Username already taken","Nume de utilizator deja folosit")); return; }
     const generatedEmail = `${normalized}@pariuriwc2026.com`;
     const { data: authWrap, error: authErr } = await supabaseClient.auth.signUp({ email: generatedEmail, password: form.password });
-    if (authErr) { setError(/already registered/i.test(authErr.message) ? "Username already taken" : authErr.message); return; }
+    if (authErr) { setError(/already registered/i.test(authErr.message) ? tr("Username already taken","Nume de utilizator deja folosit") : authErr.message); return; }
     if (authWrap.user) {
       // Password is held by Supabase Auth — never store the plaintext in the profile row.
       // Admins are provisioned in the DB (set is_admin = true), not via client-side magic creds.
@@ -1040,38 +1058,55 @@ function App() {
     setSession({ username: form.username.trim() });
   }
 
+  // Tap a pick = save a DRAFT (changeable until you lock it or kickoff). A draft is NOT
+  // in the community vote, and has no lock time. It still counts for points once the match
+  // finishes (auto-locked at kickoff with the worst time-lead).
   async function submitPrediction(matchId, outcome) {
     const m = matches.find(x => x.id === matchId);
     if (!m || m.result || new Date(m.match_date + "T" + m.match_time) <= new Date()) {
-      triggerToast("🔒 Predictions are closed"); return;
+      triggerToast(tr("🔒 Predictions are closed","🔒 Predicțiile sunt închise")); return;
     }
+    if (currentUser.pickTimes?.[matchId]) { triggerToast(tr("🔒 Already locked — can't change","🔒 Deja blocat — nu poți schimba")); return; }
     const localUpdated = { ...(currentUser.picks || {}), [matchId]: outcome };
     const { error: updateErr } = await supabaseClient.from('profiles').update({ picks: localUpdated }).eq('username', currentUser.username);
-    if (updateErr) { triggerToast("❌ Sync error"); return; }
-    // Record when this pick was locked, for the speed tiebreaker. Best-effort: works
-    // once the optional `pick_times` column exists (see supabase/sql/add_pick_times.sql),
-    // and is silently ignored if it doesn't — so picks always save either way.
+    if (updateErr) { triggerToast(tr("❌ Sync error","❌ Eroare de sincronizare")); return; }
+    setUsers(prev => ({ ...prev, [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated } }));
+  }
+
+  // LOCK IN = commit the pick: final (immutable), timestamped (true lock time for the
+  // tiebreaker), and from now on counted in the community vote.
+  async function lockPick(matchId) {
+    const m = matches.find(x => x.id === matchId);
+    const choice = currentUser.picks?.[matchId];
+    if (!choice) { triggerToast(tr("Pick Home, Draw or Away first","Alege întâi Acasă, Egal sau Oaspeți")); return; }
+    if (!m || m.result || new Date(m.match_date + "T" + m.match_time) <= new Date()) { triggerToast(tr("🔒 Predictions are closed","🔒 Predicțiile sunt închise")); return; }
+    if (currentUser.pickTimes?.[matchId]) return; // already locked
+    const label = choice === "1" ? tr("HOME","ACASĂ") : choice === "X" ? tr("DRAW","EGAL") : tr("AWAY","OASPEȚI");
+    const confirmMsg = tr(`Lock ${label} on ${m.team1} vs ${m.team2}?\nYou can't change it after this.`, `Blochezi ${label} la ${m.team1} vs ${m.team2}?\nNu mai poți schimba după.`);
+    if (!window.confirm(confirmMsg)) return;
     const localTimes = { ...(currentUser.pickTimes || {}), [matchId]: new Date().toISOString() };
-    await supabaseClient.from('profiles').update({ pick_times: localTimes }).eq('username', currentUser.username);
-    setUsers(prev => ({ ...prev, [currentUser.username.toLowerCase()]: { ...currentUser, picks: localUpdated, pickTimes: localTimes } }));
-    triggerToast("⚽ Pick saved!");
+    const { error: lockErr } = await supabaseClient.from('profiles').update({ pick_times: localTimes }).eq('username', currentUser.username);
+    if (lockErr) { triggerToast(tr("❌ Sync error","❌ Eroare de sincronizare")); return; }
+    setUsers(prev => ({ ...prev, [currentUser.username.toLowerCase()]: { ...currentUser, pickTimes: localTimes } }));
+    triggerToast(tr("🔒 Pick locked!","🔒 Predicție blocată!"));
   }
 
   async function updateChampionPrediction(team) {
     if (currentUser.isPickLocked || isTournamentBegun) return;
     await supabaseClient.from('profiles').update({ tournament_winner_pick: team || null }).eq('username', currentUser.username);
-    fetchAllData(); triggerToast("🏆 Champion updated");
+    fetchAllData(); triggerToast(tr("🏆 Champion updated","🏆 Campion actualizat"));
   }
 
   async function lockChampionChoice() {
-    if (!currentUser.tournamentWinnerPick) { triggerToast("Pick a team first"); return; }
-    if (!window.confirm("Lock in your champion pick for good?")) return;
+    if (!currentUser.tournamentWinnerPick) { triggerToast(tr("Pick a team first","Alege întâi o echipă")); return; }
+    if (!window.confirm(tr("Lock in your champion pick for good?","Blochezi definitiv alegerea campionului?"))) return;
     await supabaseClient.from('profiles').update({ is_pick_locked: true }).eq('username', currentUser.username);
-    fetchAllData(); triggerToast("🔒 Champion locked in!");
+    fetchAllData(); triggerToast(tr("🔒 Champion locked in!","🔒 Campion blocat!"));
   }
 
   function computeGlobalBetDistribution(matchId) {
-    const pool = Object.values(users).filter(u => !u.isAdmin).map(u => u.picks?.[matchId]).filter(Boolean);
+    // Locked picks only — a pick counts here once it has a lock timestamp.
+    const pool = Object.values(users).filter(u => !u.isAdmin && u.pickTimes?.[matchId]).map(u => u.picks?.[matchId]).filter(Boolean);
     if (!pool.length) return { p1: 0, pX: 0, p2: 0 };
     const c = { "1": 0, "X": 0, "2": 0 };
     pool.forEach(v => { if (c[v] !== undefined) c[v]++; });
@@ -1183,8 +1218,9 @@ function App() {
     const unlocked = [], locked = [];
     pending.forEach(m => {
       const matchStarted = new Date(m.match_date + "T" + m.match_time) <= new Date();
-      // Locked = user already picked OR match has started
-      if (currentUser?.picks?.[m.id] || matchStarted) locked.push(m);
+      // "Locked" zone = the player has LOCKED this pick, or the match has kicked off.
+      // A draft (picked but not locked) stays editable in the open zone until then.
+      if (currentUser?.pickTimes?.[m.id] || matchStarted) locked.push(m);
       else unlocked.push(m);
     });
     return { unlocked, locked };
@@ -1206,17 +1242,21 @@ function App() {
         {/* Desktop tab nav */}
         {session && !currentUser?.isAdmin && (
           <div className="topnav-desktop-tabs" style={{ marginLeft: 24, gap: 4 }}>
-            {[["profile","👤 Profile"],["leaderboard","📊 Leaderboard"],["matchday","⚽ Matches"]].map(([key, label]) => (
+            {[["profile", tr("👤 Profile","👤 Profil")],["leaderboard", tr("📊 Leaderboard","📊 Clasament")],["matchday", tr("⚽ Matches","⚽ Meciuri")]].map(([key, label]) => (
               <button key={key} className={`desktop-tab ${page===key?"active":""}`} onClick={() => setPage(key)}>{label}</button>
             ))}
           </div>
         )}
 
         <div className="nav-right">
+          <div className="lang-toggle">
+            <button className={lang==="en"?"active":""} onClick={() => switchLang("en")}>EN</button>
+            <button className={lang==="ro"?"active":""} onClick={() => switchLang("ro")}>RO</button>
+          </div>
           {session && (
             <>
               <span className="nav-user">{String(session.username).toUpperCase()}</span>
-              <button className="btn-ghost" onClick={() => { setSession(null); setPage("home"); }}>Log out</button>
+              <button className="btn-ghost" onClick={() => { setSession(null); setPage("home"); }}>{tr("Log out","Ieșire")}</button>
             </>
           )}
         </div>
@@ -1228,35 +1268,35 @@ function App() {
           <div className="home-hero">
             <div className="hero-badge">★ USA, Mexico and Canada ★</div>
             <h1 className="hero-title">WORLD CUP<br/><span className="accent">PARIURI</span></h1>
-            <p className="hero-sub">Predict every match, earn points from the odds, and climb the leaderboard.</p>
+            <p className="hero-sub">{tr("Predict every match, earn points from the odds, and climb the leaderboard.","Prezice meciurile, câștigă puncte pe baza cotelor și urcă în clasament.")}</p>
           </div>
 
           <div className="container" style={{ maxWidth: 440 }}>
             <div className="card card-pitch">
               <div className="auth-tabs">
-                <button className={`auth-tab ${authMode==="login"?"active":""}`} onClick={() => setAuthMode("login")}>Log In</button>
-                <button className={`auth-tab ${authMode==="register"?"active":""}`} onClick={() => setAuthMode("register")}>Sign Up</button>
+                <button className={`auth-tab ${authMode==="login"?"active":""}`} onClick={() => setAuthMode("login")}>{tr("Log In","Intră")}</button>
+                <button className={`auth-tab ${authMode==="register"?"active":""}`} onClick={() => setAuthMode("register")}>{tr("Sign Up","Înregistrare")}</button>
               </div>
 
               {authMode === "login" ? (
                 <div className="flex-col">
-                  <input placeholder="Username" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
-                  <input type="password" placeholder="Password" className="input" onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
+                  <input placeholder={tr("Username","Nume utilizator")} className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
+                  <input type="password" placeholder={tr("Password","Parolă")} className="input" onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
                   {error && <div className="error-text">{error}</div>}
-                  <button className="btn btn-gold btn-block" onClick={runLogin}>ENTER THE ARENA →</button>
+                  <button className="btn btn-gold btn-block" onClick={runLogin}>{tr("ENTER THE ARENA →","INTRĂ ÎN ARENĂ →")}</button>
                 </div>
               ) : (
                 <div className="flex-col">
-                  <input placeholder="Choose a username" className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
-                  <input type="password" placeholder="Password" className="input" onChange={e => setForm({ ...form, password: e.target.value })} />
+                  <input placeholder={tr("Choose a username","Alege un nume de utilizator")} className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
+                  <input type="password" placeholder={tr("Password","Parolă")} className="input" onChange={e => setForm({ ...form, password: e.target.value })} />
                   <div className="select-wrap">
                     <select className="input" onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
-                      <option value="">❤️ Favorite team</option>
+                      <option value="">{tr("❤️ Favorite team","❤️ Echipa favorită")}</option>
                       {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
                     </select>
                   </div>
                   {error && <div className="error-text">{error}</div>}
-                  <button className="btn btn-gold btn-block" onClick={runRegister}>CREATE ACCOUNT →</button>
+                  <button className="btn btn-gold btn-block" onClick={runRegister}>{tr("CREATE ACCOUNT →","CREEAZĂ CONT →")}</button>
                 </div>
               )}
             </div>
@@ -1267,12 +1307,12 @@ function App() {
       {/* ── GATEWAY ── */}
       {page === "gateway" && (
         <div className="gateway-wrap">
-          <div className="hero-badge">★ KICKOFF IN</div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, marginBottom: 0 }}>WORLD CUP KICK OFF</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>Set your picks before the first whistle.</p>
+          <div className="hero-badge">{tr("★ KICKOFF IN","★ ÎNCEPE ÎN")}</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, marginBottom: 0 }}>{tr("WORLD CUP KICK OFF","ÎNCEPE CUPA MONDIALĂ")}</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>{tr("Set your picks before the first whistle.","Setează-ți predicțiile înainte de primul fluier.")}</p>
           <div className="countdown-display">{globalTimer}</div>
           <button className="btn btn-gold" style={{ padding: '14px 44px', fontSize: 16 }} onClick={() => setPage("profile")}>
-            ENTER THE ARENA →
+            {tr("ENTER THE ARENA →","INTRĂ ÎN ARENĂ →")}
           </button>
         </div>
       )}
@@ -1290,11 +1330,11 @@ function App() {
               <span className="badge badge-gold">{flagEmoji(currentUser.favoriteTeam)} {currentUser.favoriteTeam}</span>
               <div className="stat-row">
                 <div className="stat-box">
-                  <div className="stat-label">Rank</div>
+                  <div className="stat-label">{tr("Rank","Rang")}</div>
                   <div className="stat-value gold">#{myRank || '—'}</div>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-label">Points</div>
+                  <div className="stat-label">{tr("Points","Puncte")}</div>
                   <div className="stat-value">{(sortedLeaderboard.find(x => x.username.toLowerCase() === currentUser.username.toLowerCase())?.totalPoints || 0).toFixed(2)}</div>
                 </div>
               </div>
@@ -1303,33 +1343,35 @@ function App() {
             {/* Champion Pick */}
             <div className="champion-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>🏆 Pick the Champion</div>
-                {currentUser.isPickLocked && <span className="badge badge-green">LOCKED 🔒</span>}
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>{tr("🏆 Pick the Champion","🏆 Alege Campioana")}</div>
+                {currentUser.isPickLocked && <span className="badge badge-green">{tr("LOCKED 🔒","BLOCAT 🔒")}</span>}
               </div>
               <div className="flex-row" style={{ marginBottom: 12 }}>
                 <div className="select-wrap" style={{ flex: 1 }}>
                   <select className="input" value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
-                    <option value="">Select a team…</option>
-                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — odds {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
+                    <option value="">{tr("Select a team…","Selectați echipa…")}</option>
+                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — {tr("odds","cotă")} {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
                   </select>
                 </div>
                 {!currentUser.isPickLocked && !isTournamentBegun && (
-                  <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>LOCK IN</button>
+                  <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>{tr("LOCK IN","BLOCHEAZĂ")}</button>
                 )}
               </div>
               <div className="champion-msg">
                 {currentUser.tournamentWinnerPick
-                  ? <>🎯 If <strong>{currentUser.tournamentWinnerPick}</strong> win the World Cup, you’ll earn <strong>+{tournamentConfig.champion_odds[currentUser.tournamentWinnerPick] || "10.0"} bonus points</strong> at the end.</>
-                  : "Pick who you think wins the World Cup — a correct call adds big bonus points to your total at the end."}
-                {!currentUser.isPickLocked && !isTournamentBegun && <div style={{ marginTop: 4, opacity: 0.7 }}>Lock it in to set it in stone (and keep it secret until kickoff).</div>}
+                  ? (lang === "ro"
+                      ? <>🎯 Dacă <strong>{currentUser.tournamentWinnerPick}</strong> câștigă Cupa Mondială, primești <strong>+{tournamentConfig.champion_odds[currentUser.tournamentWinnerPick] || "10.0"} puncte bonus</strong> la final.</>
+                      : <>🎯 If <strong>{currentUser.tournamentWinnerPick}</strong> win the World Cup, you’ll earn <strong>+{tournamentConfig.champion_odds[currentUser.tournamentWinnerPick] || "10.0"} bonus points</strong> at the end.</>)
+                  : tr("Pick who you think wins the World Cup — a correct call adds big bonus points to your total at the end.","Alege cine crezi că va câștiga Cupa Mondială — o predicție corectă îți aduce puncte bonus importante la final.")}
+                {!currentUser.isPickLocked && !isTournamentBegun && <div style={{ marginTop: 4, opacity: 0.7 }}>{tr("Lock it in to set it in stone (and keep it secret until kickoff).","Blochează-o ca să fie definitivă (rămâne secretă până la start).")}</div>}
               </div>
             </div>
 
             {/* Match history */}
-            <div className="section-label" style={{ marginTop: 20, marginBottom: 12 }}>Match History</div>
+            <div className="section-label" style={{ marginTop: 20, marginBottom: 12 }}>{tr("Match History","Istoric Meciuri")}</div>
             {matches.filter(m => m.result).length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '40px 0', fontSize: 14 }}>
-                Results will show up here after matches are played.
+                {tr("Results will show up here after matches are played.","Rezultatele vor apărea aici după ce se joacă meciurile.")}
               </div>
             ) : matches.filter(m => m.result).map(m => {
               const choice = currentUser.picks?.[m.id];
@@ -1342,7 +1384,7 @@ function App() {
                       {flagEmoji(m.team1)} {m.team1} {(m.home_score != null && m.away_score != null) ? `${m.home_score}–${m.away_score}` : "vs"} {m.team2} {flagEmoji(m.team2)}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                      Result: [{m.result}] · Your pick: [{choice || "–"}]
+                      {tr("Result","Rezultat")}: [{m.result}] · {tr("Your pick","Alegerea ta")}: [{choice || "–"}]
                     </div>
                   </div>
                   <span className={`badge ${isWin ? "badge-green" : "badge-red"}`}>+{gained} pts</span>
@@ -1355,16 +1397,16 @@ function App() {
         {/* ── LEADERBOARD ── */}
         {page === "leaderboard" && (
           <div>
-            <div className="section-title" style={{ marginBottom: 4 }}>Leaderboard</div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 16 }}>Ranked by points · ties broken by wins, then who locked in earliest</div>
+            <div className="section-title" style={{ marginBottom: 4 }}>{tr("Leaderboard","Clasament")}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 16 }}>{tr("Ranked by points · ties broken by wins, then who locked in earliest","După puncte · la egalitate contează victoriile, apoi cine a blocat mai devreme")}</div>
 
             {hotPlayers.length > 0 && (
               <div className="streak-panel hot">
-                <div className="streak-head">🔥 On Fire — watch out</div>
+                <div className="streak-head">{tr("🔥 On Fire — watch out","🔥 În Formă — atenție la ei")}</div>
                 {hotPlayers.map(p => (
                   <div key={p.username} className="streak-row">
                     <span className="streak-name">{String(p.username).toUpperCase()}</span>
-                    <span className="streak-tag hot">{p.streak} in a row</span>
+                    <span className="streak-tag hot">{p.streak} {tr("in a row","la rând")}</span>
                   </div>
                 ))}
               </div>
@@ -1372,11 +1414,11 @@ function App() {
 
             {coldPlayers.length > 0 && (
               <div className="streak-panel cold">
-                <div className="streak-head">🧊 Ice Cold — rough patch</div>
+                <div className="streak-head">{tr("🧊 Ice Cold — rough patch","🧊 Răciți — perioadă slabă")}</div>
                 {coldPlayers.map(p => (
                   <div key={p.username} className="streak-row">
                     <span className="streak-name">{String(p.username).toUpperCase()}</span>
-                    <span className="streak-tag cold">{p.streak} misses in a row</span>
+                    <span className="streak-tag cold">{p.streak} {tr("misses in a row","greșite la rând")}</span>
                   </div>
                 ))}
               </div>
@@ -1385,8 +1427,8 @@ function App() {
             {sortedLeaderboard.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '50px 0' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🏟️</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>The arena is empty</div>
-                <div style={{ fontSize: 13 }}>No players have joined yet.</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>{tr("The arena is empty","Arena e goală")}</div>
+                <div style={{ fontSize: 13 }}>{tr("No players have joined yet.","Niciun jucător înscris încă.")}</div>
               </div>
             )}
 
@@ -1411,7 +1453,7 @@ function App() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className="lb-pts">{u.totalPoints.toFixed(2)}</div>
-                    <div className="lb-wins">{u.correctWins} {u.correctWins === 1 ? "win" : "wins"}</div>
+                    <div className="lb-wins">{u.correctWins} {tr(u.correctWins === 1 ? "win" : "wins", u.correctWins === 1 ? "victorie" : "victorii")}</div>
                   </div>
                 </div>
               );
@@ -1424,18 +1466,18 @@ function App() {
           <div>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
               <div>
-                <div className="section-label">Predictions</div>
-                <div className="section-title">Matches</div>
+                <div className="section-label">{tr("Predictions","Predicții")}</div>
+                <div className="section-title">{tr("Matches","Meciuri")}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {isTournamentBegun && (
                   <div className="live-badge"><div className="live-dot"></div>LIVE</div>
                 )}
                 <button
-                  onClick={() => fetchAllData().then(() => triggerToast("🔄 Updated!"))}
+                  onClick={() => fetchAllData().then(() => triggerToast(tr("🔄 Updated!","🔄 Actualizat!")))}
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--muted)', borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.4px' }}
                 >
-                  ↻ Refresh
+                  ↻ {tr("Refresh","Reîmprospătează")}
                 </button>
               </div>
             </div>
@@ -1443,10 +1485,10 @@ function App() {
             {processedMatchdaySplit.unlocked.length === 0 && processedMatchdaySplit.locked.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '60px 0' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🏟️</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--white)' }}>No matches scheduled</div>
-                <div style={{ fontSize: 13, marginBottom: 16 }}>The admin hasn't posted any matches yet.</div>
-                <button onClick={() => fetchAllData().then(() => triggerToast("🔄 Updated!"))} style={{ background: 'var(--gold-dim)', border: '1px solid rgba(245,197,66,0.25)', color: 'var(--gold)', borderRadius: 20, padding: '8px 20px', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.5px' }}>
-                  ↻ Check again
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--white)' }}>{tr("No matches scheduled","Niciun meci programat")}</div>
+                <div style={{ fontSize: 13, marginBottom: 16 }}>{tr("The admin hasn't posted any matches yet.","Adminul nu a adăugat încă meciuri.")}</div>
+                <button onClick={() => fetchAllData().then(() => triggerToast(tr("🔄 Updated!","🔄 Actualizat!")))} style={{ background: 'var(--gold-dim)', border: '1px solid rgba(245,197,66,0.25)', color: 'var(--gold)', borderRadius: 20, padding: '8px 20px', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.5px' }}>
+                  ↻ {tr("Check again","Verifică din nou")}
                 </button>
               </div>
             )}
@@ -1457,8 +1499,8 @@ function App() {
               return (
                 <div key={m.id} className="card" style={{ borderLeftColor: 'var(--gold)', borderLeftWidth: 3 }}>
                   <div className="match-header">
-                    <span>Matchday {m.tournament_stage} · {m.match_date}</span>
-                    <span className="badge badge-gold">⏳ OPEN</span>
+                    <span>{tr("Matchday","Etapa")} {m.tournament_stage} · {m.match_date}</span>
+                    <span className="badge badge-gold">{tr("⏳ OPEN","⏳ DESCHIS")}</span>
                   </div>
                   <div className="match-teams">
                     <div className="match-team">
@@ -1472,17 +1514,20 @@ function App() {
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1","HOME",m.odds1],["X","DRAW",m.oddsx],["2","AWAY",m.odds2]].map(([key,label,odds]) => (
+                    {[["1",tr("HOME","ACASĂ"),m.odds1],["X",tr("DRAW","EGAL"),m.oddsx],["2",tr("AWAY","OASPEȚI"),m.odds2]].map(([key,label,odds]) => (
                       <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
                       </button>
                     ))}
                   </div>
+                  <button className="btn btn-gold btn-block" style={{ marginTop: 12 }} disabled={!sel} onClick={() => lockPick(m.id)}>
+                    {sel ? tr("🔒 LOCK IN PICK","🔒 BLOCHEAZĂ PREDICȚIA") : tr("SELECT HOME / DRAW / AWAY","ALEGE ACASĂ / EGAL / OASPEȚI")}
+                  </button>
                   <div className="community">
-                    <div className="community-head">Community votes</div>
+                    <div className="community-head">{tr("Community votes (locked)","Voturi comunitate (blocate)")}</div>
                     {(distrib.p1 + distrib.pX + distrib.p2) === 0 ? (
-                      <div className="community-empty">Be the first to call this one</div>
+                      <div className="community-empty">{tr("Be the first to call this one","Fii primul care prezice")}</div>
                     ) : (
                       <>
                         <div className="dist-bar">
@@ -1491,9 +1536,9 @@ function App() {
                           <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                         </div>
                         <div className="community-legend">
-                          <span style={{ color: 'var(--red)' }}>HOME {distrib.p1}%</span>
-                          <span style={{ color: 'var(--gold)' }}>DRAW {distrib.pX}%</span>
-                          <span style={{ color: 'var(--blue)' }}>AWAY {distrib.p2}%</span>
+                          <span style={{ color: 'var(--red)' }}>{tr("HOME","ACASĂ")} {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>{tr("DRAW","EGAL")} {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>{tr("AWAY","OASPEȚI")} {distrib.p2}%</span>
                         </div>
                       </>
                     )}
@@ -1503,19 +1548,19 @@ function App() {
             })}
 
             {processedMatchdaySplit.locked.length > 0 && (
-              <div className="section-label" style={{ margin: '16px 0 10px' }}>Locked picks</div>
+              <div className="section-label" style={{ margin: '16px 0 10px' }}>{tr("Locked picks","Predicții blocate")}</div>
             )}
 
             {processedMatchdaySplit.locked.map(m => {
               const distrib = computeGlobalBetDistribution(m.id);
               const sel = currentUser?.picks?.[m.id];
               const matchStarted = new Date(m.match_date + "T" + m.match_time) <= new Date();
-              const lockReason = matchStarted ? '⏱ IN PLAY' : '🔒 PICKED';
+              const lockReason = matchStarted ? tr('⏱ IN PLAY','⏱ ÎN JOC') : tr('🔒 LOCKED','🔒 BLOCAT');
               const lockColor = matchStarted ? 'var(--red)' : 'var(--muted)';
               return (
                 <div key={m.id} className="card" style={{ opacity: 0.78 }}>
                   <div className="match-header">
-                    <span>Matchday {m.tournament_stage} · {m.match_date} · {m.match_time}</span>
+                    <span>{tr("Matchday","Etapa")} {m.tournament_stage} · {m.match_date} · {m.match_time}</span>
                     <span className="badge badge-muted" style={{ color: lockColor }}>{lockReason}</span>
                   </div>
                   <div className="match-teams">
@@ -1530,17 +1575,18 @@ function App() {
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1","HOME",m.odds1],["X","DRAW",m.oddsx],["2","AWAY",m.odds2]].map(([key,label,odds]) => (
-                      <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
+                    {[["1",tr("HOME","ACASĂ"),m.odds1],["X",tr("DRAW","EGAL"),m.oddsx],["2",tr("AWAY","OASPEȚI"),m.odds2]].map(([key,label,odds]) => (
+                      <div key={key} className={`pick-btn locked ${sel===key?`selected-${key}`:""}`}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
+                  {!sel && <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>{tr("No pick — auto-locked at kickoff (worst time)","Fără predicție — blocat automat la start (cel mai slab timp)")}</div>}
                   <div className="community">
-                    <div className="community-head">Community votes</div>
+                    <div className="community-head">{tr("Community votes (locked)","Voturi comunitate (blocate)")}</div>
                     {(distrib.p1 + distrib.pX + distrib.p2) === 0 ? (
-                      <div className="community-empty">No votes yet</div>
+                      <div className="community-empty">{tr("No votes yet","Niciun vot încă")}</div>
                     ) : (
                       <>
                         <div className="dist-bar">
@@ -1549,9 +1595,9 @@ function App() {
                           <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                         </div>
                         <div className="community-legend">
-                          <span style={{ color: 'var(--red)' }}>HOME {distrib.p1}%</span>
-                          <span style={{ color: 'var(--gold)' }}>DRAW {distrib.pX}%</span>
-                          <span style={{ color: 'var(--blue)' }}>AWAY {distrib.p2}%</span>
+                          <span style={{ color: 'var(--red)' }}>{tr("HOME","ACASĂ")} {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>{tr("DRAW","EGAL")} {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>{tr("AWAY","OASPEȚI")} {distrib.p2}%</span>
                         </div>
                       </>
                     )}
@@ -1718,7 +1764,7 @@ function App() {
       {/* ── BOTTOM NAV (mobile) ── */}
       {session && !currentUser?.isAdmin && (
         <div className="bottom-nav">
-          {[["profile","👤","Profile"],["leaderboard","📊","Leaderboard"],["matchday","⚽","Matches"]].map(([key, icon, label]) => (
+          {[["profile","👤",tr("Profile","Profil")],["leaderboard","📊",tr("Leaderboard","Clasament")],["matchday","⚽",tr("Matches","Meciuri")]].map(([key, icon, label]) => (
             <button key={key} className={`nav-btn ${page===key?"active":""}`} onClick={() => setPage(key)}>
               <span className="nav-btn-icon">{icon}</span>
               <span>{label}</span>
@@ -1734,37 +1780,37 @@ function App() {
             <div className="modal-handle"></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <div className="section-label">Profile</div>
+                <div className="section-label">{tr("Profile","Profil")}</div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900 }}>{String(inspectUser.username).toUpperCase()}</div>
               </div>
               <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setInspectUser(null)}>✕</button>
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: 8, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 13 }}><strong>Favorite team:</strong> {flagEmoji(inspectUser.favoriteTeam)} {String(inspectUser.favoriteTeam)}</div>
+              <div style={{ fontSize: 13 }}><strong>{tr("Favorite team:","Echipă favorită:")}</strong> {flagEmoji(inspectUser.favoriteTeam)} {String(inspectUser.favoriteTeam)}</div>
               <div style={{ fontSize: 13 }}>
-                <strong>Champion pick:</strong>{" "}
+                <strong>{tr("Champion pick:","Predicție campion:")}</strong>{" "}
                 {(isTournamentBegun || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                  ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick || "Not picked"}`
-                  : "🔒 Hidden until kickoff"
+                  ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick || tr("Not picked","Neselectat")}`
+                  : tr("🔒 Hidden until kickoff","🔒 Ascuns până la start")
                 }
                 {inspectUser.isPickLocked && " 🔒"}
               </div>
             </div>
 
-            <div className="section-label" style={{ marginBottom: 10 }}>Pick History</div>
+            <div className="section-label" style={{ marginBottom: 10 }}>{tr("Pick History","Istoric Selecții")}</div>
             {matches.map(m => {
               const choice = inspectUser.picks?.[m.id];
               const matchClosed = m.result || new Date(m.match_date+"T"+m.match_time) <= new Date();
               const visible = (matchClosed || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                ? (choice ? `[${choice}]` : "– No pick") : "🔒 Hidden";
+                ? (choice ? `[${choice}]` : tr("– No pick","– Nicio predicție")) : tr("🔒 Hidden","🔒 Ascuns");
               let variant = "muted";
               if (m.result && choice) variant = choice === m.result ? "green" : "danger";
               return (
                 <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div>
                     <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{m.team1} vs {m.team2}</div>
-                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· Result: ${m.result}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· ${tr("Result","Rezultat")}: ${m.result}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
                   </div>
                   <span className={`badge badge-${variant}`}>{visible}</span>
                 </div>
