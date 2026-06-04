@@ -1020,10 +1020,12 @@ function App() {
   async function runRegister() {
     if (!form.username || !form.password || !form.favoriteTeam) { setError("Please fill in all fields"); return; }
     const normalized = form.username.trim().toLowerCase();
+    if (!/^[a-z0-9_.-]{2,20}$/.test(normalized)) { setError("Username: 2–20 characters, only letters, numbers and _ . -"); return; }
+    if (form.password.length < 6) { setError("Password must be at least 6 characters"); return; }
     if (users[normalized]) { setError("Username already taken"); return; }
     const generatedEmail = `${normalized}@pariuriwc2026.com`;
     const { data: authWrap, error: authErr } = await supabaseClient.auth.signUp({ email: generatedEmail, password: form.password });
-    if (authErr) { setError(authErr.message); return; }
+    if (authErr) { setError(/already registered/i.test(authErr.message) ? "Username already taken" : authErr.message); return; }
     if (authWrap.user) {
       // Password is held by Supabase Auth — never store the plaintext in the profile row.
       // Admins are provisioned in the DB (set is_admin = true), not via client-side magic creds.
