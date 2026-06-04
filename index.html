@@ -465,6 +465,43 @@ input, select, button, textarea { font-family: var(--font-body); }
 .stat-value { font-family: var(--font-display); font-size: 24px; font-weight: 900; line-height: 1; }
 .stat-value.gold { color: var(--gold); }
 
+/* CHAMPION custom dropdown (so we can show real flag images + odds) */
+.champ-dd { position: relative; }
+.champ-dd-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm); color: var(--white);
+  padding: 11px 12px; font-size: 15px; cursor: pointer; text-align: left; min-height: 46px;
+}
+.champ-dd-btn:disabled { cursor: default; opacity: 0.85; }
+.champ-dd-cur { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.champ-dd-cur .champ-dd-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.champ-dd-odds {
+  font-family: var(--font-display); font-weight: 800; font-size: 13px;
+  color: var(--gold); background: var(--gold-dim);
+  padding: 2px 8px; border-radius: 20px; flex-shrink: 0;
+}
+.champ-dd-caret {
+  width: 10px; height: 6px; flex-shrink: 0;
+  background: var(--muted); clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.champ-dd-backdrop { position: fixed; inset: 0; z-index: 50; }
+.champ-dd-list {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 51;
+  max-height: 300px; overflow-y: auto;
+  background: #0c1430; border: 1px solid rgba(255,255,255,0.14);
+  border-radius: var(--radius-sm); box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  padding: 4px;
+}
+.champ-dd-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 6px; cursor: pointer;
+}
+.champ-dd-item:hover { background: rgba(255,255,255,0.07); }
+.champ-dd-item.sel { background: var(--gold-dim); }
+.champ-dd-item .champ-dd-name { flex: 1; font-size: 14px; font-weight: 600; }
+.champ-dd-item.clear { justify-content: center; color: var(--muted); font-size: 12px; }
+
 /* CHAMPION bonus message */
 .champion-msg {
   font-size: 12.5px; line-height: 1.5; color: var(--white);
@@ -860,6 +897,38 @@ const flagEmoji = (team) => {
   return flags[team] || "🏴‍☠️";
 };
 
+// ISO codes for real flag IMAGES (flag emoji don't render on Windows/Chrome — they
+// show "BE" etc. — so we use flagcdn.com images, which work on every platform).
+const FLAG_CODE = {
+  "United States":"us","Canada":"ca","Mexico":"mx","Argentina":"ar","Brazil":"br","Colombia":"co",
+  "Ecuador":"ec","Paraguay":"py","Uruguay":"uy","England":"gb-eng","France":"fr","Croatia":"hr",
+  "Norway":"no","Portugal":"pt","Germany":"de","Netherlands":"nl","Austria":"at","Belgium":"be",
+  "Scotland":"gb-sct","Spain":"es","Switzerland":"ch","Sweden":"se","Türkiye":"tr",
+  "Bosnia and Herzegovina":"ba","Czechia":"cz","Algeria":"dz","Cabo Verde":"cv",
+  "Côte d'Ivoire":"ci","Egypt":"eg","Ghana":"gh","Morocco":"ma","Senegal":"sn",
+  "South Africa":"za","Tunisia":"tn","DR Congo":"cd","Australia":"au","Iran":"ir",
+  "Japan":"jp","Jordan":"jo","South Korea":"kr","Qatar":"qa","Saudi Arabia":"sa",
+  "Uzbekistan":"uz","Iraq":"iq","Curaçao":"cw","Haiti":"ht","Panama":"pa","New Zealand":"nz"
+};
+// Flag image component. Falls back to the emoji if the image fails to load
+// (state-driven so it stays React-safe across re-renders).
+const Flag = ({ team, h = 14 }) => {
+  const [failed, setFailed] = useState(false);
+  const code = FLAG_CODE[team];
+  if (!code || failed) return <span style={{ fontSize: h, lineHeight: 1 }}>{flagEmoji(team)}</span>;
+  return (
+    <img
+      src={`https://flagcdn.com/${code}.svg`}
+      alt=""
+      width={Math.round(h * 1.5)}
+      height={h}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      style={{ borderRadius: 2, objectFit: 'cover', verticalAlign: 'middle', display: 'inline-block', boxShadow: '0 0 0 1px rgba(0,0,0,0.25)', flexShrink: 0 }}
+    />
+  );
+};
+
 // Map a football-data.org team name to the app's dropdown name (so flags + the
 // API result-matching line up). Mirrors the CANON map in the Edge Function.
 const _CANON_ALIAS = {
@@ -902,16 +971,19 @@ function App() {
   const [importLoading, setImportLoading] = useState(false);
   const [apiFixtures, setApiFixtures] = useState([]);
   const [importFilter, setImportFilter] = useState("");
+  const [championEdit, setChampionEdit] = useState(false);
+  const [champOpen, setChampOpen] = useState(false);
   const [lang, setLang] = useState(() => { try { return localStorage.getItem("pariuri_lang") || "en"; } catch { return "en"; } });
   // Tiny i18n helper: tr("English", "Română"). Falls back to English if no translation given.
   // (Named `tr` because `t` is used as the team loop variable in TEAMS.map(t => ...).)
   const tr = (en, ro) => (lang === "ro" && ro != null) ? ro : en;
   function switchLang(l) { setLang(l); try { localStorage.setItem("pariuri_lang", l); } catch {} }
-  // Human-readable outcome label for a pick code (1 / X / 2), localized.
-  const outcomeLabel = (code) =>
-    code === "1" ? tr("HOME","GAZDE") :
-    code === "X" ? tr("DRAW","EGALITATE") :
-    code === "2" ? tr("AWAY","OASPEȚI") : (code || "–");
+  // Match-history display: show the team the player backed (or "X" for a draw)
+  // instead of the raw 1 / X / 2 code.
+  const pickName = (m, code) =>
+    code === "1" ? m.team1 :
+    code === "2" ? m.team2 :
+    code === "X" ? "X" : "–";
 
   async function fetchAllData() {
     try {
@@ -1099,7 +1171,7 @@ function App() {
     if (!choice) { triggerToast(tr("Pick Home, Draw or Away first","Alege întâi Acasă, Egal sau Oaspeți")); return; }
     if (!m || m.result || new Date(m.match_date + "T" + m.match_time) <= new Date()) { triggerToast(tr("🔒 Predictions are closed","🔒 Predicțiile sunt închise")); return; }
     if (currentUser.pickTimes?.[matchId]) return; // already locked
-    const label = outcomeLabel(choice);
+    const label = choice === "1" ? m.team1 : choice === "2" ? m.team2 : tr("Draw","Egal");
     const confirmMsg = tr(`Lock ${label} on ${m.team1} vs ${m.team2}?\nYou can't change it after this.`, `Blochezi ${label} la ${m.team1} vs ${m.team2}?\nNu mai poți schimba după.`);
     if (!window.confirm(confirmMsg)) return;
     const localTimes = { ...(currentUser.pickTimes || {}), [matchId]: new Date().toISOString() };
@@ -1130,6 +1202,32 @@ function App() {
     pool.forEach(v => { if (c[v] !== undefined) c[v]++; });
     const tot = pool.length;
     return { p1: Math.round((c["1"]/tot)*100), pX: Math.round((c["X"]/tot)*100), p2: Math.round((c["2"]/tot)*100) };
+  }
+
+  // Download a complete snapshot of everything (picks, lock times, results, scores,
+  // champion picks, standings) as a JSON file — a manual backup the admin can keep.
+  function adminDownloadBackup() {
+    const players = Object.values(users).filter(u => !u.isAdmin).map(u => ({
+      username: u.username, favoriteTeam: u.favoriteTeam,
+      championPick: u.tournamentWinnerPick, championLocked: u.isPickLocked,
+      picks: u.picks || {}, pickTimes: u.pickTimes || {}
+    }));
+    const matchesOut = matches.map(m => ({
+      id: m.id, team1: m.team1, team2: m.team2, date: m.match_date, time: m.match_time,
+      matchday: m.tournament_stage, odds: { "1": m.odds1, "X": m.oddsx, "2": m.odds2 },
+      result: m.result, score: (m.home_score != null && m.away_score != null) ? `${m.home_score}-${m.away_score}` : null,
+      apiFixtureId: m.api_fixture_id
+    }));
+    const leaderboard = sortedLeaderboard.map((u, i) => ({ rank: i + 1, username: u.username, points: u.totalPoints, wins: u.correctWins }));
+    const backup = { exportedAt: new Date().toISOString(), tournamentConfig, leaderboard, players, matches: matchesOut };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wc2026-backup-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    triggerToast("💾 Backup downloaded");
   }
 
   async function adminFetchLiveResults() {
@@ -1345,7 +1443,7 @@ function App() {
             <div className="profile-hero">
               <div className="profile-avatar">{String(currentUser.username)[0].toUpperCase()}</div>
               <div className="profile-name">{String(currentUser.username).toUpperCase()}</div>
-              <span className="badge badge-gold">{flagEmoji(currentUser.favoriteTeam)} {currentUser.favoriteTeam}</span>
+              <span className="badge badge-gold" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Flag team={currentUser.favoriteTeam} h={12} /> {currentUser.favoriteTeam}</span>
               <div className="stat-row">
                 <div className="stat-box">
                   <div className="stat-label">{tr("Rank","Rang")}</div>
@@ -1364,17 +1462,47 @@ function App() {
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>{tr("🏆 Pick the Champion","🏆 Alege Campioana")}</div>
                 {currentUser.isPickLocked && <span className="badge badge-green">{tr("LOCKED 🔒","BLOCAT 🔒")}</span>}
               </div>
-              <div className="flex-row" style={{ marginBottom: 12 }}>
-                <div className="select-wrap" style={{ flex: 1 }}>
-                  <select className="input" value={currentUser.tournamentWinnerPick || ""} disabled={currentUser.isPickLocked || isTournamentBegun} onChange={e => updateChampionPrediction(e.target.value)}>
-                    <option value="">{tr("Select a team…","Selectați echipa…")}</option>
-                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t} — {tr("odds","cotă")} {tournamentConfig.champion_odds[t] || "10.0"}x</option>)}
-                  </select>
-                </div>
-                {!currentUser.isPickLocked && !isTournamentBegun && (
-                  <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>{tr("LOCK IN","BLOCHEAZĂ")}</button>
-                )}
-              </div>
+              {(() => {
+                const locked = currentUser.isPickLocked || isTournamentBegun;
+                const pick = currentUser.tournamentWinnerPick;
+                const odds = tournamentConfig.champion_odds || {};
+                const fav = currentUser.favoriteTeam;
+                // Favorite team first, then the rest from smallest odds to biggest.
+                const ordered = [
+                  ...(fav && TEAMS.includes(fav) ? [fav] : []),
+                  ...TEAMS.filter(x => x !== fav).sort((a, b) => (parseFloat(odds[a]) || 10) - (parseFloat(odds[b]) || 10))
+                ];
+                return (
+                  <div className="flex-row" style={{ marginBottom: 12, alignItems: 'stretch' }}>
+                    <div className="champ-dd" style={{ flex: 1 }}>
+                      <button type="button" className="champ-dd-btn" disabled={locked} onClick={() => !locked && setChampOpen(o => !o)}>
+                        {pick
+                          ? <span className="champ-dd-cur"><Flag team={pick} h={16} /><span className="champ-dd-name">{pick}</span><span className="champ-dd-odds">{odds[pick] || "10.0"}</span></span>
+                          : <span style={{ color: 'var(--muted)' }}>{tr("Select a team…","Selectați echipa…")}</span>}
+                        {!locked && <span className="champ-dd-caret" />}
+                      </button>
+                      {champOpen && !locked && (
+                        <>
+                          <div className="champ-dd-backdrop" onClick={() => setChampOpen(false)} />
+                          <div className="champ-dd-list">
+                            {pick && <div className="champ-dd-item clear" onClick={() => { updateChampionPrediction(""); setChampOpen(false); }}>— {tr("Clear pick","Șterge alegerea")} —</div>}
+                            {ordered.map(team => (
+                              <div key={team} className={`champ-dd-item ${team === pick ? "sel" : ""}`} onClick={() => { updateChampionPrediction(team); setChampOpen(false); }}>
+                                <Flag team={team} h={16} />
+                                <span className="champ-dd-name">{team}{team === fav ? ` ${tr("(favorite)","(favorită)")}` : ""}</span>
+                                <span className="champ-dd-odds">{odds[team] || "10.0"}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {!locked && (
+                      <button className="btn btn-gold btn-sm" onClick={lockChampionChoice}>{tr("LOCK IN","BLOCHEAZĂ")}</button>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="champion-msg">
                 {currentUser.tournamentWinnerPick
                   ? (lang === "ro"
@@ -1399,10 +1527,10 @@ function App() {
                 <div key={m.id} className={`history-row ${isWin ? "win" : choice ? "loss" : "neutral"}`}>
                   <div>
                     <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>
-                      {flagEmoji(m.team1)} {m.team1} {(m.home_score != null && m.away_score != null) ? `${m.home_score}–${m.away_score}` : "vs"} {m.team2} {flagEmoji(m.team2)}
+                      <Flag team={m.team1} h={14} /> {m.team1} {(m.home_score != null && m.away_score != null) ? `${m.home_score}–${m.away_score}` : "vs"} {m.team2} <Flag team={m.team2} h={14} />
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                      {tr("Result","Rezultat")}: {outcomeLabel(m.result)} · {tr("Your pick","Alegerea ta")}: {choice ? outcomeLabel(choice) : "–"}
+                      {tr("Result","Rezultat")}: {pickName(m, m.result)} · {tr("Your pick","Alegerea ta")}: {choice ? pickName(m, choice) : "–"}
                     </div>
                   </div>
                   <span className={`badge ${isWin ? "badge-green" : "badge-red"}`}>+{gained} pts</span>
@@ -1522,17 +1650,17 @@ function App() {
                   </div>
                   <div className="match-teams">
                     <div className="match-team">
-                      <div className="match-flag">{flagEmoji(m.team1)}</div>
+                      <div className="match-flag"><Flag team={m.team1} h={26} /></div>
                       <div className="match-team-name">{m.team1}</div>
                     </div>
                     <div className="match-vs">VS</div>
                     <div className="match-team">
-                      <div className="match-flag">{flagEmoji(m.team2)}</div>
+                      <div className="match-flag"><Flag team={m.team2} h={26} /></div>
                       <div className="match-team-name">{m.team2}</div>
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1",outcomeLabel("1"),m.odds1],["X",outcomeLabel("X"),m.oddsx],["2",outcomeLabel("2"),m.odds2]].map(([key,label,odds]) => (
+                    {[["1","1",m.odds1],["X","X",m.oddsx],["2","2",m.odds2]].map(([key,label,odds]) => (
                       <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
@@ -1554,9 +1682,9 @@ function App() {
                           <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                         </div>
                         <div className="community-legend">
-                          <span style={{ color: 'var(--red)' }}>{outcomeLabel("1")} {distrib.p1}%</span>
-                          <span style={{ color: 'var(--gold)' }}>{outcomeLabel("X")} {distrib.pX}%</span>
-                          <span style={{ color: 'var(--blue)' }}>{outcomeLabel("2")} {distrib.p2}%</span>
+                          <span style={{ color: 'var(--red)' }}>1: {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>X: {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>2: {distrib.p2}%</span>
                         </div>
                       </>
                     )}
@@ -1583,17 +1711,17 @@ function App() {
                   </div>
                   <div className="match-teams">
                     <div className="match-team">
-                      <div className="match-flag">{flagEmoji(m.team1)}</div>
+                      <div className="match-flag"><Flag team={m.team1} h={26} /></div>
                       <div className="match-team-name">{m.team1}</div>
                     </div>
                     <div className="match-vs">VS</div>
                     <div className="match-team">
-                      <div className="match-flag">{flagEmoji(m.team2)}</div>
+                      <div className="match-flag"><Flag team={m.team2} h={26} /></div>
                       <div className="match-team-name">{m.team2}</div>
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1",outcomeLabel("1"),m.odds1],["X",outcomeLabel("X"),m.oddsx],["2",outcomeLabel("2"),m.odds2]].map(([key,label,odds]) => (
+                    {[["1","1",m.odds1],["X","X",m.oddsx],["2","2",m.odds2]].map(([key,label,odds]) => (
                       <div key={key} className={`pick-btn locked ${sel===key?`selected-${key}`:""}`}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
@@ -1613,9 +1741,9 @@ function App() {
                           <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                         </div>
                         <div className="community-legend">
-                          <span style={{ color: 'var(--red)' }}>{outcomeLabel("1")} {distrib.p1}%</span>
-                          <span style={{ color: 'var(--gold)' }}>{outcomeLabel("X")} {distrib.pX}%</span>
-                          <span style={{ color: 'var(--blue)' }}>{outcomeLabel("2")} {distrib.p2}%</span>
+                          <span style={{ color: 'var(--red)' }}>1: {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>X: {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>2: {distrib.p2}%</span>
                         </div>
                       </>
                     )}
@@ -1629,9 +1757,12 @@ function App() {
         {/* ── ADMIN ── */}
         {page === "admin" && currentUser?.isAdmin && (
           <div>
-            <div style={{ marginBottom: 20 }}>
-              <div className="section-label">Control Panel</div>
-              <div className="section-title">Administrator</div>
+            <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <div className="section-label">Control Panel</div>
+                <div className="section-title" style={{ marginBottom: 0 }}>Administrator</div>
+              </div>
+              <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: 'var(--white)', fontSize: 11 }} onClick={adminDownloadBackup}>💾 Backup</button>
             </div>
             <div className="admin-tabs">
               {[["matches","Matches"],["results","Results"],["winner","Champion"],["players","Players"]].map(([key,label]) => (
@@ -1674,7 +1805,7 @@ function App() {
                 {matches.sort((a,b) => new Date(a.match_date)-new Date(b.match_date)).map(m => (
                   <div key={m.id} className="admin-match-row">
                     <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><Flag team={m.team1} h={13} /> {m.team1} vs {m.team2} <Flag team={m.team2} h={13} /></div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                         {m.match_date} · Odds: {m.odds1} / {m.oddsx} / {m.odds2}
                         {m.api_fixture_id && ` · API: ${m.api_fixture_id}`}
@@ -1698,7 +1829,7 @@ function App() {
                 {matches.map(m => (
                   <div key={m.id} className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{flagEmoji(m.team1)} {m.team1} vs {m.team2} {flagEmoji(m.team2)}</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><Flag team={m.team1} h={13} /> {m.team1} vs {m.team2} <Flag team={m.team2} h={13} /></div>
                       {m.result ? <span className="result-pill">✓ {m.result}{(m.home_score != null && m.away_score != null) ? ` · ${m.home_score}–${m.away_score}` : ""}</span> : <span className="badge badge-muted">Pending</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
@@ -1725,23 +1856,35 @@ function App() {
 
             {adminTab === "winner" && (
               <div className="card card-gold">
-                <div className="section-label" style={{ marginBottom: 8 }}>Final Stage</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 16 }}>🏆 World Champion</div>
-                <div className="select-wrap" style={{ marginBottom: 20 }}>
-                  <select className="input" value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
-                    <option value="">— Tournament ongoing —</option>
-                    {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
-                  </select>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div>
+                    <div className="section-label" style={{ marginBottom: 4 }}>Final Stage</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>🏆 Champion &amp; Odds</div>
+                  </div>
+                  <button className={`btn btn-sm ${championEdit ? "btn-green" : "btn-gold"}`} onClick={() => { if (championEdit) triggerToast("🔒 Saved & locked"); setChampionEdit(!championEdit); }}>
+                    {championEdit ? "🔒 Lock" : "✏️ Edit"}
+                  </button>
                 </div>
+                {!championEdit && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>🔒 Locked so you can't change it by accident — press <strong>Edit</strong> to adjust the winner or odds.</div>}
 
-                <div className="section-label" style={{ marginBottom: 12 }}>Champion Odds per Team</div>
-                <div className="grid-2">
-                  {TEAMS.map(t => (
-                    <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.02)', padding: '7px 10px', borderRadius: 8 }}>
-                      <span style={{ flex: 1, fontSize: 12 }}>{flagEmoji(t)} {t}</span>
-                      <input type="number" step="0.01" className="input" style={{ width: 72, padding: '6px 8px', fontSize: 13 }} placeholder="10.0" value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminSetOddsConfig(t, e.target.value)} />
-                    </div>
-                  ))}
+                <div style={{ opacity: championEdit ? 1 : 0.5, pointerEvents: championEdit ? 'auto' : 'none', filter: championEdit ? 'none' : 'blur(0.7px)', transition: 'opacity 0.2s, filter 0.2s' }}>
+                  <div className="section-label" style={{ marginBottom: 8 }}>World Champion</div>
+                  <div className="select-wrap" style={{ marginBottom: 20 }}>
+                    <select className="input" disabled={!championEdit} value={tournamentConfig.tournament_winner || ""} onChange={e => adminSaveWinnerConfig(e.target.value || null)}>
+                      <option value="">— Tournament ongoing —</option>
+                      {TEAMS.map(t => <option key={t} value={t}>{flagEmoji(t)} {t}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="section-label" style={{ marginBottom: 12 }}>Champion Odds per Team</div>
+                  <div className="grid-2">
+                    {TEAMS.map(t => (
+                      <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.02)', padding: '7px 10px', borderRadius: 8 }}>
+                        <span style={{ flex: 1, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}><Flag team={t} h={12} /> {t}</span>
+                        <input type="number" step="0.01" className="input" disabled={!championEdit} style={{ width: 72, padding: '6px 8px', fontSize: 13 }} placeholder="10.0" value={tournamentConfig.champion_odds[t] || ""} onChange={e => adminSetOddsConfig(t, e.target.value)} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1758,7 +1901,7 @@ function App() {
                           {String(u.username)} {u.isAdmin && <span className="badge badge-gold" style={{ fontSize: 10 }}>Admin</span>}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                          {flagEmoji(u.favoriteTeam)} {u.favoriteTeam} · Champion: {u.tournamentWinnerPick || "Not picked"}
+                          <Flag team={u.favoriteTeam} h={12} /> {u.favoriteTeam} · Champion: {u.tournamentWinnerPick || "Not picked"}
                         </div>
                       </div>
                       {!u.isAdmin && (
@@ -1805,11 +1948,13 @@ function App() {
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: 8, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 13 }}><strong>{tr("Favorite team:","Echipă favorită:")}</strong> {flagEmoji(inspectUser.favoriteTeam)} {String(inspectUser.favoriteTeam)}</div>
+              <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}><strong>{tr("Favorite team:","Echipă favorită:")}</strong> <Flag team={inspectUser.favoriteTeam} h={12} /> {String(inspectUser.favoriteTeam)}</div>
               <div style={{ fontSize: 13 }}>
                 <strong>{tr("Champion pick:","Predicție campion:")}</strong>{" "}
                 {(isTournamentBegun || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                  ? `${flagEmoji(inspectUser.tournamentWinnerPick)} ${inspectUser.tournamentWinnerPick || tr("Not picked","Neselectat")}`
+                  ? (inspectUser.tournamentWinnerPick
+                      ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Flag team={inspectUser.tournamentWinnerPick} h={12} /> {inspectUser.tournamentWinnerPick}</span>
+                      : tr("Not picked","Neselectat"))
                   : tr("🔒 Hidden until kickoff","🔒 Ascuns până la start")
                 }
                 {inspectUser.isPickLocked && " 🔒"}
@@ -1827,14 +1972,14 @@ function App() {
               }
               return shownMatches.map(m => {
                 const choice = inspectUser.picks?.[m.id];
-                const label = choice ? outcomeLabel(choice) : tr("– No pick","– Nicio predicție");
+                const label = choice ? pickName(m, choice) : tr("– No pick","– Nicio predicție");
                 let variant = "muted";
                 if (m.result && choice) variant = choice === m.result ? "green" : "danger";
                 return (
                   <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
                     <div>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{m.team1} vs {m.team2}</div>
-                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· ${tr("Result","Rezultat")}: ${outcomeLabel(m.result)}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· ${tr("Result","Rezultat")}: ${pickName(m, m.result)}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
                     </div>
                     <span className={`badge badge-${variant}`}>{label}</span>
                   </div>
@@ -1863,7 +2008,7 @@ function App() {
               return (
                 <div key={u.username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
                   <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>{String(u.username)}</span>
-                  <span className={`badge ${isCorrect ? "badge-green" : "badge-muted"}`}>{outcomeLabel(choice)}</span>
+                  <span className={`badge ${isCorrect ? "badge-green" : "badge-muted"}`}>{String(choice)}</span>
                 </div>
               );
             })}
@@ -1898,7 +2043,7 @@ function App() {
                   <div key={fx.id} onClick={() => adminPickFixture(fx)}
                     style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', opacity: already ? 0.5 : 1 }}>
                     <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>{flagEmoji(t1)} {t1} vs {t2} {flagEmoji(t2)}</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><Flag team={t1} h={13} /> {t1} vs {t2} <Flag team={t2} h={13} /></div>
                       <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{d.toLocaleString()} · ID {fx.id}</div>
                     </div>
                     {already ? <span className="badge badge-muted">Added</span> : <span className="badge badge-gold">+ Pick</span>}
