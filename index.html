@@ -907,6 +907,11 @@ function App() {
   // (Named `tr` because `t` is used as the team loop variable in TEAMS.map(t => ...).)
   const tr = (en, ro) => (lang === "ro" && ro != null) ? ro : en;
   function switchLang(l) { setLang(l); try { localStorage.setItem("pariuri_lang", l); } catch {} }
+  // Human-readable outcome label for a pick code (1 / X / 2), localized.
+  const outcomeLabel = (code) =>
+    code === "1" ? tr("HOME","GAZDE") :
+    code === "X" ? tr("DRAW","EGALITATE") :
+    code === "2" ? tr("AWAY","OASPEȚI") : (code || "–");
 
   async function fetchAllData() {
     try {
@@ -1094,7 +1099,7 @@ function App() {
     if (!choice) { triggerToast(tr("Pick Home, Draw or Away first","Alege întâi Acasă, Egal sau Oaspeți")); return; }
     if (!m || m.result || new Date(m.match_date + "T" + m.match_time) <= new Date()) { triggerToast(tr("🔒 Predictions are closed","🔒 Predicțiile sunt închise")); return; }
     if (currentUser.pickTimes?.[matchId]) return; // already locked
-    const label = choice === "1" ? tr("HOME","ACASĂ") : choice === "X" ? tr("DRAW","EGAL") : tr("AWAY","OASPEȚI");
+    const label = outcomeLabel(choice);
     const confirmMsg = tr(`Lock ${label} on ${m.team1} vs ${m.team2}?\nYou can't change it after this.`, `Blochezi ${label} la ${m.team1} vs ${m.team2}?\nNu mai poți schimba după.`);
     if (!window.confirm(confirmMsg)) return;
     const localTimes = { ...(currentUser.pickTimes || {}), [matchId]: new Date().toISOString() };
@@ -1397,7 +1402,7 @@ function App() {
                       {flagEmoji(m.team1)} {m.team1} {(m.home_score != null && m.away_score != null) ? `${m.home_score}–${m.away_score}` : "vs"} {m.team2} {flagEmoji(m.team2)}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                      {tr("Result","Rezultat")}: [{m.result}] · {tr("Your pick","Alegerea ta")}: [{choice || "–"}]
+                      {tr("Result","Rezultat")}: {outcomeLabel(m.result)} · {tr("Your pick","Alegerea ta")}: {choice ? outcomeLabel(choice) : "–"}
                     </div>
                   </div>
                   <span className={`badge ${isWin ? "badge-green" : "badge-red"}`}>+{gained} pts</span>
@@ -1527,7 +1532,7 @@ function App() {
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1",tr("HOME","ACASĂ"),m.odds1],["X",tr("DRAW","EGAL"),m.oddsx],["2",tr("AWAY","OASPEȚI"),m.odds2]].map(([key,label,odds]) => (
+                    {[["1",outcomeLabel("1"),m.odds1],["X",outcomeLabel("X"),m.oddsx],["2",outcomeLabel("2"),m.odds2]].map(([key,label,odds]) => (
                       <button key={key} className={`pick-btn ${sel===key?`selected-${key}`:""}`} onClick={() => submitPrediction(m.id, key)}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
@@ -1549,9 +1554,9 @@ function App() {
                           <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                         </div>
                         <div className="community-legend">
-                          <span style={{ color: 'var(--red)' }}>{tr("HOME","ACASĂ")} {distrib.p1}%</span>
-                          <span style={{ color: 'var(--gold)' }}>{tr("DRAW","EGAL")} {distrib.pX}%</span>
-                          <span style={{ color: 'var(--blue)' }}>{tr("AWAY","OASPEȚI")} {distrib.p2}%</span>
+                          <span style={{ color: 'var(--red)' }}>{outcomeLabel("1")} {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>{outcomeLabel("X")} {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>{outcomeLabel("2")} {distrib.p2}%</span>
                         </div>
                       </>
                     )}
@@ -1588,7 +1593,7 @@ function App() {
                     </div>
                   </div>
                   <div className="pick-row">
-                    {[["1",tr("HOME","ACASĂ"),m.odds1],["X",tr("DRAW","EGAL"),m.oddsx],["2",tr("AWAY","OASPEȚI"),m.odds2]].map(([key,label,odds]) => (
+                    {[["1",outcomeLabel("1"),m.odds1],["X",outcomeLabel("X"),m.oddsx],["2",outcomeLabel("2"),m.odds2]].map(([key,label,odds]) => (
                       <div key={key} className={`pick-btn locked ${sel===key?`selected-${key}`:""}`}>
                         <span className="pick-btn-label">{label}</span>
                         <span className="pick-btn-odds">{odds}</span>
@@ -1608,9 +1613,9 @@ function App() {
                           <div className="dist-seg" style={{ width: `${distrib.p2}%`, background: 'var(--blue)' }}></div>
                         </div>
                         <div className="community-legend">
-                          <span style={{ color: 'var(--red)' }}>{tr("HOME","ACASĂ")} {distrib.p1}%</span>
-                          <span style={{ color: 'var(--gold)' }}>{tr("DRAW","EGAL")} {distrib.pX}%</span>
-                          <span style={{ color: 'var(--blue)' }}>{tr("AWAY","OASPEȚI")} {distrib.p2}%</span>
+                          <span style={{ color: 'var(--red)' }}>{outcomeLabel("1")} {distrib.p1}%</span>
+                          <span style={{ color: 'var(--gold)' }}>{outcomeLabel("X")} {distrib.pX}%</span>
+                          <span style={{ color: 'var(--blue)' }}>{outcomeLabel("2")} {distrib.p2}%</span>
                         </div>
                       </>
                     )}
@@ -1812,23 +1817,30 @@ function App() {
             </div>
 
             <div className="section-label" style={{ marginBottom: 10 }}>{tr("Pick History","Istoric Selecții")}</div>
-            {matches.map(m => {
-              const choice = inspectUser.picks?.[m.id];
-              const matchClosed = m.result || new Date(m.match_date+"T"+m.match_time) <= new Date();
-              const visible = (matchClosed || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                ? (choice ? `[${choice}]` : tr("– No pick","– Nicio predicție")) : tr("🔒 Hidden","🔒 Ascuns");
-              let variant = "muted";
-              if (m.result && choice) variant = choice === m.result ? "green" : "danger";
-              return (
-                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{m.team1} vs {m.team2}</div>
-                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· ${tr("Result","Rezultat")}: ${m.result}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
+            {(() => {
+              const isSelf = String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase();
+              // Viewing someone else: only show FINISHED matches, so picks on upcoming /
+              // in-play games stay secret. Viewing yourself: see everything (your own picks).
+              const shownMatches = isSelf ? matches : matches.filter(m => m.result);
+              if (shownMatches.length === 0) {
+                return <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '24px 0', fontSize: 13 }}>{tr("No finished matches yet — picks stay hidden until games are played.","Niciun meci încheiat încă — predicțiile rămân ascunse până se joacă.")}</div>;
+              }
+              return shownMatches.map(m => {
+                const choice = inspectUser.picks?.[m.id];
+                const label = choice ? outcomeLabel(choice) : tr("– No pick","– Nicio predicție");
+                let variant = "muted";
+                if (m.result && choice) variant = choice === m.result ? "green" : "danger";
+                return (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{m.team1} vs {m.team2}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· ${tr("Result","Rezultat")}: ${outcomeLabel(m.result)}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
+                    </div>
+                    <span className={`badge badge-${variant}`}>{label}</span>
                   </div>
-                  <span className={`badge badge-${variant}`}>{visible}</span>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
       )}
@@ -1851,7 +1863,7 @@ function App() {
               return (
                 <div key={u.username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
                   <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>{String(u.username)}</span>
-                  <span className={`badge ${isCorrect ? "badge-green" : "badge-muted"}`}>{String(choice)}</span>
+                  <span className={`badge ${isCorrect ? "badge-green" : "badge-muted"}`}>{outcomeLabel(choice)}</span>
                 </div>
               );
             })}
