@@ -1748,6 +1748,11 @@ function App() {
                       </>
                     )}
                   </div>
+                  {matchStarted && (
+                    <button className="btn btn-sm btn-block" style={{ marginTop: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--white)', fontSize: 12 }} onClick={() => setInspectMatchBets(m)}>
+                      👁 {tr("See everyone's picks","Vezi predicțiile tuturor")}
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -1964,11 +1969,12 @@ function App() {
             <div className="section-label" style={{ marginBottom: 10 }}>{tr("Pick History","Istoric Selecții")}</div>
             {(() => {
               const isSelf = String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase();
-              // Viewing someone else: only show FINISHED matches, so picks on upcoming /
-              // in-play games stay secret. Viewing yourself: see everything (your own picks).
-              const shownMatches = isSelf ? matches : matches.filter(m => m.result);
+              // Viewing someone else: reveal a pick only once that match has KICKED OFF (or
+              // finished) — picks on upcoming games stay secret. Viewing yourself: see all.
+              const started = (m) => m.result || new Date(m.match_date + "T" + m.match_time) <= new Date();
+              const shownMatches = isSelf ? matches : matches.filter(started);
               if (shownMatches.length === 0) {
-                return <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '24px 0', fontSize: 13 }}>{tr("No finished matches yet — picks stay hidden until games are played.","Niciun meci încheiat încă — predicțiile rămân ascunse până se joacă.")}</div>;
+                return <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '24px 0', fontSize: 13 }}>{tr("No kicked-off matches yet — picks stay hidden until games start.","Niciun meci început încă — predicțiile rămân ascunse până încep meciurile.")}</div>;
               }
               return shownMatches.map(m => {
                 const choice = inspectUser.picks?.[m.id];
@@ -1997,18 +2003,18 @@ function App() {
             <div className="modal-handle"></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <div className="section-label">Bet Audit</div>
+                <div className="section-label">{tr("Who picked what","Cine ce a ales")}</div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 900 }}>{inspectMatchBets.team1} vs {inspectMatchBets.team2}</div>
               </div>
               <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setInspectMatchBets(null)}>✕</button>
             </div>
             {Object.values(users).filter(u => !u.isAdmin).map(u => {
-              const choice = u.picks?.[inspectMatchBets.id] || "–";
-              const isCorrect = choice === inspectMatchBets.result;
+              const choice = u.picks?.[inspectMatchBets.id];
+              const isCorrect = inspectMatchBets.result && choice === inspectMatchBets.result;
               return (
                 <div key={u.username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
                   <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>{String(u.username)}</span>
-                  <span className={`badge ${isCorrect ? "badge-green" : "badge-muted"}`}>{String(choice)}</span>
+                  <span className={`badge ${isCorrect ? "badge-green" : "badge-muted"}`}>{choice ? pickName(inspectMatchBets, choice) : tr("No pick","Fără pred.")}</span>
                 </div>
               );
             })}
