@@ -229,7 +229,7 @@ input, select, button, textarea { font-family: var(--font-body); }
   border-radius: var(--radius-sm);
   color: var(--white);
   padding: 12px 14px;
-  font-size: 15px;
+  font-size: 16px; /* 16px min keeps iOS Safari from auto-zooming on focus */
   width: 100%;
   outline: none;
   transition: border-color 0.2s;
@@ -238,7 +238,7 @@ input, select, button, textarea { font-family: var(--font-body); }
   appearance: none;
 }
 .input:focus { border-color: rgba(59,123,255,0.6); }
-.input::placeholder { color: var(--muted); font-size: 14px; }
+.input::placeholder { color: var(--muted); font-size: 15px; }
 .input option { background: #0c1430; color: var(--white); }
 
 /* Select wrapper — adds custom dropdown arrow */
@@ -506,10 +506,10 @@ input, select, button, textarea { font-family: var(--font-body); }
 /* HOME / AUTH */
 .home-hero {
   text-align: center;
-  padding: 40px 20px 28px;
+  padding: 24px 20px 16px;
 }
-@media (min-height: 700px) {
-  .home-hero { padding: 60px 20px 36px; }
+@media (min-height: 760px) {
+  .home-hero { padding: 52px 20px 32px; }
 }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -527,10 +527,10 @@ input, select, button, textarea { font-family: var(--font-body); }
 .hero-title {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(44px, 12vw, 72px);
-  line-height: 0.9;
+  font-size: clamp(36px, 10vw, 66px);
+  line-height: 0.92;
   letter-spacing: -1px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .hero-title .accent {
   background: linear-gradient(90deg, var(--red), var(--gold) 55%, var(--blue));
@@ -540,11 +540,22 @@ input, select, button, textarea { font-family: var(--font-body); }
   color: var(--gold);
 }
 .hero-sub {
-  font-size: 15px;
+  font-size: 14.5px;
   color: var(--muted);
   max-width: 380px;
-  margin: 0 auto 36px;
-  line-height: 1.55;
+  margin: 0 auto 22px;
+  line-height: 1.5;
+}
+
+/* Short screens (most phones): compress the auth screen so it fits with no scroll */
+@media (max-height: 720px) {
+  .home-hero { padding: 14px 20px 8px; }
+  .hero-badge { margin-bottom: 10px; }
+  .hero-title { font-size: clamp(32px, 9vw, 52px); margin-bottom: 4px; }
+  .hero-sub { font-size: 13px; margin-bottom: 12px; }
+  .auth-tabs { margin-bottom: 12px; }
+  .home-auth .card { padding: 14px 16px; }
+  .home-auth .flex-col { gap: 9px; }
 }
 
 /* AUTH TABS */
@@ -573,8 +584,10 @@ input, select, button, textarea { font-family: var(--font-body); }
 /* GATEWAY */
 .gateway-wrap {
   display: flex; flex-direction: column; align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 80px 20px 40px;
+  padding: 32px 20px;
+  min-height: calc(100dvh - 58px);
   max-width: 480px;
   margin: 0 auto;
 }
@@ -1264,14 +1277,14 @@ function App() {
 
       {/* ── HOME ── */}
       {page === "home" && (
-        <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ minHeight: 'calc(100dvh - 58px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div className="home-hero">
             <div className="hero-badge">★ USA, Mexico and Canada ★</div>
             <h1 className="hero-title">WORLD CUP<br/><span className="accent">PARIURI</span></h1>
             <p className="hero-sub">{tr("Predict every match, earn points from the odds, and climb the leaderboard.","Prezice meciurile, câștigă puncte pe baza cotelor și urcă în clasament.")}</p>
           </div>
 
-          <div className="container" style={{ maxWidth: 440 }}>
+          <div className="container home-auth" style={{ maxWidth: 440 }}>
             <div className="card card-pitch">
               <div className="auth-tabs">
                 <button className={`auth-tab ${authMode==="login"?"active":""}`} onClick={() => setAuthMode("login")}>{tr("Log In","Intră")}</button>
@@ -1318,7 +1331,7 @@ function App() {
       )}
 
       {/* ── MAIN PAGES ── */}
-      <div className="container page-body">
+      <div className="container page-body" style={{ display: ['profile','leaderboard','matchday','admin'].includes(page) ? undefined : 'none' }}>
 
         {/* ── PROFILE ── */}
         {page === "profile" && currentUser && (
