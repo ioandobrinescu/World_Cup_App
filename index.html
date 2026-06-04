@@ -241,6 +241,16 @@ input, select, button, textarea { font-family: var(--font-body); }
 .input::placeholder { color: var(--muted); font-size: 15px; }
 .input option { background: #0c1430; color: var(--white); }
 
+/* Password field with show/hide eye */
+.pwd-wrap { position: relative; display: flex; align-items: center; width: 100%; }
+.pwd-wrap .input { padding-right: 46px; }
+.pwd-eye {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  background: transparent; border: none; cursor: pointer;
+  font-size: 17px; line-height: 1; padding: 6px 8px; opacity: 0.65;
+}
+.pwd-eye:hover { opacity: 1; }
+
 /* Select wrapper — adds custom dropdown arrow */
 .select-wrap {
   position: relative;
@@ -929,6 +939,17 @@ const Flag = ({ team, h = 14 }) => {
   );
 };
 
+// Password input with a show/hide (eye) toggle.
+function PasswordField({ placeholder, onChange, onKeyDown }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="pwd-wrap">
+      <input type={show ? "text" : "password"} className="input" placeholder={placeholder} onChange={onChange} onKeyDown={onKeyDown} />
+      <button type="button" className="pwd-eye" onClick={() => setShow(s => !s)} aria-label="Show or hide password" title="Show / hide">{show ? "🙈" : "👁️"}</button>
+    </div>
+  );
+}
+
 // Map a football-data.org team name to the app's dropdown name (so flags + the
 // API result-matching line up). Mirrors the CANON map in the Edge Function.
 const _CANON_ALIAS = {
@@ -957,7 +978,7 @@ function App() {
   const [tournamentConfig, setTournamentConfig] = useState({ tournament_name: "World Cup 2026", tournament_winner: null, champion_odds: {} });
   const [page, setPage] = useState("home");
   const [authMode, setAuthMode] = useState("login");
-  const [form, setForm] = useState({ username: "", password: "", favoriteTeam: "" });
+  const [form, setForm] = useState({ username: "", password: "", confirmPassword: "", favoriteTeam: "" });
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [adminTab, setAdminTab] = useState("matches");
@@ -1130,6 +1151,7 @@ function App() {
     const normalized = form.username.trim().toLowerCase();
     if (!/^[a-z0-9_.-]{2,20}$/.test(normalized)) { setError(tr("Username: 2–20 characters, only letters, numbers and _ . -","Nume utilizator: 2–20 caractere, doar litere, cifre și _ . -")); return; }
     if (form.password.length < 6) { setError(tr("Password must be at least 6 characters","Parola trebuie să aibă minim 6 caractere")); return; }
+    if (form.password !== form.confirmPassword) { setError(tr("Passwords don't match","Parolele nu coincid")); return; }
     if (users[normalized]) { setError(tr("Username already taken","Nume de utilizator deja folosit")); return; }
     const generatedEmail = `${normalized}@pariuriwc2026.com`;
     const { data: authWrap, error: authErr } = await supabaseClient.auth.signUp({ email: generatedEmail, password: form.password });
@@ -1397,14 +1419,15 @@ function App() {
               {authMode === "login" ? (
                 <div className="flex-col">
                   <input placeholder={tr("Username","Nume utilizator")} className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
-                  <input type="password" placeholder={tr("Password","Parolă")} className="input" onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
+                  <PasswordField placeholder={tr("Password","Parolă")} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
                   {error && <div className="error-text">{error}</div>}
                   <button className="btn btn-gold btn-block" onClick={runLogin}>{tr("ENTER THE ARENA →","INTRĂ ÎN ARENĂ →")}</button>
                 </div>
               ) : (
                 <div className="flex-col">
                   <input placeholder={tr("Choose a username","Alege un nume de utilizator")} className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
-                  <input type="password" placeholder={tr("Password","Parolă")} className="input" onChange={e => setForm({ ...form, password: e.target.value })} />
+                  <PasswordField placeholder={tr("Password","Parolă")} onChange={e => setForm({ ...form, password: e.target.value })} />
+                  <PasswordField placeholder={tr("Confirm password","Confirmă parola")} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} />
                   <div className="select-wrap">
                     <select className="input" onChange={e => setForm({ ...form, favoriteTeam: e.target.value })}>
                       <option value="">{tr("❤️ Favorite team","❤️ Echipa favorită")}</option>
