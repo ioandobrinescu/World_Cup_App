@@ -338,6 +338,25 @@ input, select, button, textarea { font-family: var(--font-body); }
 .dist-bar { height: 7px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.06); display: flex; }
 .dist-seg { height: 100%; transition: width 0.4s ease; }
 
+/* RESULTS tab — expanded per-match pick groups */
+.results-picks { margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; }
+.results-group { margin-bottom: 10px; }
+.results-group-head {
+  font-family: var(--font-display); font-weight: 800; font-size: 12px;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 6px 10px; border-radius: 7px; margin-bottom: 6px;
+}
+.results-group-head.correct { background: rgba(47,191,113,0.16); color: var(--green); }
+.results-group-head.wrong { background: rgba(226,59,78,0.13); color: var(--red); }
+.results-group-head.none { background: rgba(255,255,255,0.05); color: var(--muted); }
+.results-player {
+  font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 6px;
+  margin-bottom: 4px; background: rgba(255,255,255,0.02); border-left: 3px solid transparent;
+}
+.results-player.correct { color: #84e3ad; border-left-color: var(--green); }
+.results-player.wrong { color: #f4a6ae; border-left-color: var(--red); }
+.results-player.none { color: var(--muted); border-left-color: rgba(255,255,255,0.12); }
+
 /* COMMUNITY VOTE block */
 .community { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
 .community-head {
@@ -994,6 +1013,7 @@ function App() {
   const [importFilter, setImportFilter] = useState("");
   const [championEdit, setChampionEdit] = useState(false);
   const [champOpen, setChampOpen] = useState(false);
+  const [expandedResult, setExpandedResult] = useState(null);
   const [lang, setLang] = useState(() => { try { return localStorage.getItem("pariuri_lang") || "en"; } catch { return "en"; } });
   // Tiny i18n helper: tr("English", "Română"). Falls back to English if no translation given.
   // (Named `tr` because `t` is used as the team loop variable in TEAMS.map(t => ...).)
@@ -1410,7 +1430,7 @@ function App() {
         {/* Desktop tab nav */}
         {session && !currentUser?.isAdmin && (
           <div className="topnav-desktop-tabs" style={{ marginLeft: 24, gap: 4 }}>
-            {[["profile", tr("👤 Profile","👤 Profil")],["leaderboard", tr("📊 Leaderboard","📊 Clasament")],["matchday", tr("⚽ Matches","⚽ Meciuri")]].map(([key, label]) => (
+            {[["profile", tr("👤 Profile","👤 Profil")],["leaderboard", tr("📊 Leaderboard","📊 Clasament")],["matchday", tr("⚽ Matches","⚽ Meciuri")],["results", tr("📋 Results","📋 Rezultate")]].map(([key, label]) => (
               <button key={key} className={`desktop-tab ${page===key?"active":""}`} onClick={() => setPage(key)}>{label}</button>
             ))}
           </div>
@@ -1487,7 +1507,7 @@ function App() {
       )}
 
       {/* ── MAIN PAGES ── */}
-      <div className="container page-body" style={{ display: ['profile','leaderboard','matchday','admin'].includes(page) ? undefined : 'none' }}>
+      <div className="container page-body" style={{ display: ['profile','leaderboard','matchday','results','admin'].includes(page) ? undefined : 'none' }}>
 
         {/* ── PROFILE ── */}
         {page === "profile" && currentUser && (
@@ -1812,6 +1832,79 @@ function App() {
           </div>
         )}
 
+        {/* ── RESULTS (public history) ── */}
+        {page === "results" && (
+          <div>
+            <div className="section-label">{tr("History","Istoric")}</div>
+            <div className="section-title" style={{ marginBottom: 4 }}>{tr("Results","Rezultate")}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 16 }}>{tr("Finished matches and everyone's picks — the public record.","Meciuri încheiate și predicțiile tuturor — istoricul public.")}</div>
+
+            {finishedChrono.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '50px 0' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 6, color: 'var(--white)' }}>{tr("No finished matches yet","Niciun meci încheiat încă")}</div>
+                <div style={{ fontSize: 13 }}>{tr("Results appear here once games are played and scored.","Rezultatele apar aici după ce se joacă și se punctează meciurile.")}</div>
+              </div>
+            )}
+
+            {[...finishedChrono].reverse().map(m => {
+              const expanded = expandedResult === m.id;
+              const groups = { "1": [], "X": [], "2": [], none: [] };
+              Object.values(users).filter(u => !u.isAdmin).forEach(u => {
+                const c = u.picks?.[m.id];
+                (c === "1" || c === "X" || c === "2") ? groups[c].push(u.username) : groups.none.push(u.username);
+              });
+              const order = [m.result, ...["1", "X", "2"].filter(o => o !== m.result)];
+              const byName = (a, b) => a.toLowerCase().localeCompare(b.toLowerCase());
+              return (
+                <div key={m.id} className="card" style={{ cursor: 'pointer' }} onClick={() => setExpandedResult(expanded ? null : m.id)}>
+                  <div className="match-header">
+                    <span>{tr("Matchday","Etapa")} {m.tournament_stage} · {m.match_date}</span>
+                    <span className="result-pill">{tr("FINAL","FINAL")}</span>
+                  </div>
+                  <div className="match-teams">
+                    <div className="match-team">
+                      <div className="match-flag"><Flag team={m.team1} h={26} /></div>
+                      <div className="match-team-name">{m.team1}</div>
+                    </div>
+                    <div className="match-vs">{(m.home_score != null && m.away_score != null) ? `${m.home_score} - ${m.away_score}` : "FT"}</div>
+                    <div className="match-team">
+                      <div className="match-flag"><Flag team={m.team2} h={26} /></div>
+                      <div className="match-team-name">{m.team2}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                    {expanded ? tr("▲ Hide picks","▲ Ascunde predicțiile") : tr("▼ Tap to see everyone's picks","▼ Apasă pentru predicțiile tuturor")}
+                  </div>
+                  {expanded && (
+                    <div className="results-picks" onClick={e => e.stopPropagation()}>
+                      {order.map(outcome => {
+                        const players = groups[outcome].slice().sort(byName);
+                        if (!players.length) return null;
+                        const correct = outcome === m.result;
+                        return (
+                          <div key={outcome} className="results-group">
+                            <div className={`results-group-head ${correct ? "correct" : "wrong"}`}>
+                              {correct ? "✓" : "✗"} {pickName(m, outcome)} · {players.length}
+                            </div>
+                            {players.map(u => <div key={u} className={`results-player ${correct ? "correct" : "wrong"}`}>{u}</div>)}
+                          </div>
+                        );
+                      })}
+                      {groups.none.length > 0 && (
+                        <div className="results-group">
+                          <div className="results-group-head none">— {tr("No pick","Fără predicție")} · {groups.none.length}</div>
+                          {groups.none.slice().sort(byName).map(u => <div key={u} className="results-player none">{u}</div>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* ── ADMIN ── */}
         {page === "admin" && currentUser?.isAdmin && (
           <div>
@@ -1983,7 +2076,7 @@ function App() {
       {/* ── BOTTOM NAV (mobile) ── */}
       {session && !currentUser?.isAdmin && (
         <div className="bottom-nav">
-          {[["profile","👤",tr("Profile","Profil")],["leaderboard","📊",tr("Leaderboard","Clasament")],["matchday","⚽",tr("Matches","Meciuri")]].map(([key, icon, label]) => (
+          {[["profile","👤",tr("Profile","Profil")],["leaderboard","📊",tr("Leaderboard","Clasament")],["matchday","⚽",tr("Matches","Meciuri")],["results","📋",tr("Results","Rezultate")]].map(([key, icon, label]) => (
             <button key={key} className={`nav-btn ${page===key?"active":""}`} onClick={() => setPage(key)}>
               <span className="nav-btn-icon">{icon}</span>
               <span>{label}</span>
@@ -2005,46 +2098,32 @@ function App() {
               <button style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }} onClick={() => setInspectUser(null)}>✕</button>
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: 8, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}><strong>{tr("Favorite team:","Echipă favorită:")}</strong> <Flag team={inspectUser.favoriteTeam} h={12} /> {String(inspectUser.favoriteTeam)}</div>
-              <div style={{ fontSize: 13 }}>
-                <strong>{tr("Champion pick:","Predicție campion:")}</strong>{" "}
-                {(isTournamentBegun || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase())
-                  ? (inspectUser.tournamentWinnerPick
-                      ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Flag team={inspectUser.tournamentWinnerPick} h={12} /> {inspectUser.tournamentWinnerPick}</span>
-                      : tr("Not picked","Neselectat"))
-                  : tr("🔒 Hidden until kickoff","🔒 Ascuns până la start")
-                }
-                {inspectUser.isPickLocked && " 🔒"}
-              </div>
-            </div>
-
-            <div className="section-label" style={{ marginBottom: 10 }}>{tr("Pick History","Istoric Selecții")}</div>
             {(() => {
-              const isSelf = String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase();
-              // Viewing someone else: reveal a pick only once that match has KICKED OFF (or
-              // finished) — picks on upcoming games stay secret. Viewing yourself: see all.
-              const started = (m) => m.result || new Date(m.match_date + "T" + m.match_time) <= new Date();
-              const shownMatches = isSelf ? matches : matches.filter(started);
-              if (shownMatches.length === 0) {
-                return <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '24px 0', fontSize: 13 }}>{tr("No kicked-off matches yet — picks stay hidden until games start.","Niciun meci început încă — predicțiile rămân ascunse până încep meciurile.")}</div>;
-              }
-              return shownMatches.map(m => {
-                const choice = inspectUser.picks?.[m.id];
-                const label = choice ? pickName(m, choice) : tr("– No pick","– Nicio predicție");
-                let variant = "muted";
-                if (m.result && choice) variant = choice === m.result ? "green" : "danger";
-                return (
-                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 6, border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{m.team1} vs {m.team2}</div>
-                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{m.match_date} {m.result && `· ${tr("Result","Rezultat")}: ${pickName(m, m.result)}${(m.home_score != null && m.away_score != null) ? ` (${m.home_score}–${m.away_score})` : ""}`}</div>
-                    </div>
-                    <span className={`badge badge-${variant}`}>{label}</span>
+              const corr = matches.filter(m => m.result && inspectUser.picks?.[m.id] === m.result).length;
+              const wrong = matches.filter(m => m.result && inspectUser.picks?.[m.id] && inspectUser.picks[m.id] !== m.result).length;
+              const champVisible = isTournamentBegun || String(inspectUser.username).toLowerCase() === String(currentUser?.username).toLowerCase();
+              const champ = inspectUser.tournamentWinnerPick;
+              return (
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '14px 16px', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 11 }}>
+                  <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><strong>{tr("Favorite team:","Echipă favorită:")}</strong> <Flag team={inspectUser.favoriteTeam} h={12} /> {String(inspectUser.favoriteTeam)}</div>
+                  <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <strong>{tr("Champion pick:","Predicție campion:")}</strong>{" "}
+                    {champVisible
+                      ? (champ
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><Flag team={champ} h={12} /> {champ} <span className="badge badge-gold" style={{ fontSize: 10 }}>+{tournamentConfig.champion_odds[champ] || "10.0"} {tr("bonus pts","pts bonus")}</span>{inspectUser.isPickLocked && " 🔒"}</span>
+                          : tr("Not picked","Neselectat"))
+                      : tr("🔒 Hidden until kickoff","🔒 Ascuns până la start")}
                   </div>
-                );
-              });
+                  <div style={{ fontSize: 13 }}>
+                    <strong>{tr("Record:","Bilanț:")}</strong>{" "}
+                    <span style={{ color: 'var(--green)', fontWeight: 700 }}>✓ {corr} {tr("correct","corecte")}</span>
+                    {"  ·  "}
+                    <span style={{ color: 'var(--red)', fontWeight: 700 }}>✗ {wrong} {tr("wrong","greșite")}</span>
+                  </div>
+                </div>
+              );
             })()}
+            <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 12 }}>{tr("See every pick for each game in the Results tab.","Vezi toate predicțiile pentru fiecare meci în tab-ul Rezultate.")}</div>
           </div>
         </div>
       )}
