@@ -1193,6 +1193,7 @@ function App() {
   }
 
   async function runRegister() {
+    if (new Date() >= WORLD_CUP_KICKOFF) { setError(tr("Sign-ups are closed — the tournament has started.","Înscrierile s-au închis — turneul a început.")); return; }
     if (!form.username || !form.password || !form.favoriteTeam) { setError(tr("Please fill in all fields","Completați toate câmpurile")); return; }
     const normalized = form.username.trim().toLowerCase();
     if (!/^[a-z0-9_.-]{2,20}$/.test(normalized)) { setError(tr("Username: 2–20 characters, only letters, numbers and _ . -","Nume utilizator: 2–20 caractere, doar litere, cifre și _ . -")); return; }
@@ -1462,11 +1463,17 @@ function App() {
           <div className="container home-auth" style={{ maxWidth: 440 }}>
             <div className="card card-pitch">
               <div className="auth-tabs">
-                <button className={`auth-tab ${authMode==="login"?"active":""}`} onClick={() => setAuthMode("login")}>{tr("Log In","Intră")}</button>
-                <button className={`auth-tab ${authMode==="register"?"active":""}`} onClick={() => setAuthMode("register")}>{tr("Sign Up","Înregistrare")}</button>
+                <button className={`auth-tab ${(authMode==="login"||isTournamentBegun)?"active":""}`} onClick={() => setAuthMode("login")}>{tr("Log In","Intră")}</button>
+                {!isTournamentBegun && (
+                  <button className={`auth-tab ${authMode==="register"?"active":""}`} onClick={() => setAuthMode("register")}>{tr("Sign Up","Înregistrare")}</button>
+                )}
               </div>
 
-              {authMode === "login" ? (
+              {isTournamentBegun && (
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', textAlign: 'center', marginBottom: 14, lineHeight: 1.45 }}>🔒 {tr("Sign-ups are closed — the tournament has started. Log in if you already have an account.","Înscrierile s-au închis — turneul a început. Conectează-te dacă ai deja cont.")}</div>
+              )}
+
+              {(authMode === "login" || isTournamentBegun) ? (
                 <div className="flex-col">
                   <input placeholder={tr("Username","Nume utilizator")} className="input" onChange={e => setForm({ ...form, username: e.target.value })} />
                   <PasswordField placeholder={tr("Password","Parolă")} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
