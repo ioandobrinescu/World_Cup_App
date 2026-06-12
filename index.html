@@ -455,7 +455,6 @@ input, select, button, textarea { font-family: var(--font-body); }
   width: 36px; text-align: center; flex-shrink: 0;
 }
 .lb-rank-num.top3 { color: var(--gold); }
-.lb-delta { font-size: 10px; font-weight: 800; text-align: center; }
 .lb-name { font-family: var(--font-display); font-size: 17px; font-weight: 800; }
 .lb-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
 .lb-pts { font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--gold); }
@@ -1011,6 +1010,7 @@ function App() {
   const [importLoading, setImportLoading] = useState(false);
   const [apiFixtures, setApiFixtures] = useState([]);
   const [importFilter, setImportFilter] = useState("");
+  const [matchesFilter, setMatchesFilter] = useState("all");
   const [championEdit, setChampionEdit] = useState(false);
   const [champOpen, setChampOpen] = useState(false);
   const [expandedResult, setExpandedResult] = useState(null);
@@ -1052,8 +1052,7 @@ function App() {
               tournamentWinnerPick: u.tournament_winner_pick ? String(u.tournament_winner_pick) : null,
               isPickLocked: u.is_pick_locked || false,
               picks: u.picks && typeof u.picks === 'object' ? u.picks : {},
-              pickTimes: u.pick_times && typeof u.pick_times === 'object' ? u.pick_times : {},
-              previousRank: u.previous_rank || 0
+              pickTimes: u.pick_times && typeof u.pick_times === 'object' ? u.pick_times : {}
             };
           }
         });
@@ -1314,10 +1313,7 @@ function App() {
     } catch (err) { alert(`Error: ${err.message}`); }
   }
 
-  async function commitMatchResultWithRankSnapshot(matchId, outcome, homeScore = null, awayScore = null) {
-    // Writing the result also snapshots every player's prior rank for the ↑/↓ arrows —
-    // handled by the `trg_snapshot_ranks` DB trigger (see supabase/sql/leaderboard_rank_snapshot.sql),
-    // which fires before the result lands and works for both this manual path and the cron sync.
+  async function commitMatchResult(matchId, outcome, homeScore = null, awayScore = null) {
     const patch = { result: outcome };
     if (homeScore !== null && awayScore !== null) { patch.home_score = homeScore; patch.away_score = awayScore; }
     await supabaseClient.from('matches').update(patch).eq('id', matchId);
@@ -1363,7 +1359,7 @@ function App() {
   }
 
   async function adminForceResult(mid, res) {
-    if (window.confirm("Override the result?")) { await commitMatchResultWithRankSnapshot(mid, res); fetchAllData(); }
+    if (window.confirm("Override the result?")) { await commitMatchResult(mid, res); fetchAllData(); }
   }
 
   async function adminSubmitScore(mid) {
@@ -1372,7 +1368,7 @@ function App() {
     const h = parseInt(d.h), a = parseInt(d.a);
     if (isNaN(h) || isNaN(a) || h < 0 || a < 0) { alert("Invalid score"); return; }
     if (!window.confirm(`Confirm result ${h}–${a}?`)) return;
-    await commitMatchResultWithRankSnapshot(mid, h > a ? "1" : a > h ? "2" : "X", h, a);
+    await commitMatchResult(mid, h > a ? "1" : a > h ? "2" : "X", h, a);
     setScoreDrafts(p => { const c = { ...p }; delete c[mid]; return c; });
     fetchAllData(); triggerToast("✅ Score saved!");
   }
@@ -1660,19 +1656,12 @@ function App() {
 
             {sortedLeaderboard.map((u, i) => {
               const rank = i + 1;
-              const prev = u.previousRank || rank;
-              const delta = prev - rank;
               return (
                 <div key={u.username} className="lb-row" onClick={() => setInspectUser(u)}>
                   <div style={{ minWidth: 44, textAlign: 'center' }}>
                     <div className={`lb-rank-num ${rank <= 3 ? "top3" : ""}`}>
                       {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
                     </div>
-                    {delta !== 0 && (
-                      <div className="lb-delta" style={{ color: delta > 0 ? 'var(--green)' : 'var(--red)' }}>
-                        {delta > 0 ? `↑${delta}` : `↓${Math.abs(delta)}`}
-                      </div>
-                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="lb-name">{String(u.username).toUpperCase()}</div>
@@ -1959,19 +1948,42 @@ function App() {
                   <button className="btn btn-gold btn-block" style={{ marginTop: 14 }} onClick={adminCreateMatch}>+ ADD MATCH</button>
                 </div>
 
-                <div className="section-label" style={{ margin: '20px 0 10px' }}>Scheduled Matches</div>
-                {matches.sort((a,b) => new Date(a.match_date)-new Date(b.match_date)).map(m => (
-                  <div key={m.id} className="admin-match-row">
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><Flag team={m.team1} h={13} /> {m.team1} vs {m.team2} <Flag team={m.team2} h={13} /></div>
-                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                        {m.match_date} · Odds: {m.odds1} / {m.oddsx} / {m.odds2}
-                        {m.api_fixture_id && ` · API: ${m.api_fixture_id}`}
-                      </div>
-                    </div>
-                    <button className="btn btn-danger btn-sm" onClick={() => adminDeleteMatch(m.id)}>✕</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0 10px' }}>
+                  <div className="section-label" style={{ marginBottom: 0 }}>Scheduled Matches</div>
+                  <div className="select-wrap" style={{ width: 'auto' }}>
+                    <select className="input" style={{ fontSize: 11, padding: '6px 30px 6px 10px' }} value={matchesFilter} onChange={e => setMatchesFilter(e.target.value)}>
+                      <option value="all">All matches</option>
+                      <option value="nopicks">No picks yet</option>
+                    </select>
                   </div>
-                ))}
+                </div>
+                {matches.sort((a,b) => new Date(a.match_date)-new Date(b.match_date)).map(m => {
+                  const kickoffPassed = new Date(m.match_date + "T" + m.match_time) <= new Date();
+                  const missingPicks = Object.values(users).filter(u => !u.isAdmin && !u.picks?.[m.id]);
+                  if (matchesFilter === "nopicks" && (m.result || kickoffPassed || missingPicks.length === 0)) return null;
+                  return (
+                    <div key={m.id} className="admin-match-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}><Flag team={m.team1} h={13} /> {m.team1} vs {m.team2} <Flag team={m.team2} h={13} /></div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                            {m.match_date} · Odds: {m.odds1} / {m.oddsx} / {m.odds2}
+                            {m.api_fixture_id && ` · API: ${m.api_fixture_id}`}
+                          </div>
+                        </div>
+                        <button className="btn btn-danger btn-sm" onClick={() => adminDeleteMatch(m.id)}>✕</button>
+                      </div>
+                      {matchesFilter === "nopicks" && (
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
+                          ⚠️ {missingPicks.length} {missingPicks.length === 1 ? "player hasn't" : "players haven't"} picked: {missingPicks.map(u => String(u.username)).join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {matchesFilter === "nopicks" && matches.filter(m => !m.result && new Date(m.match_date + "T" + m.match_time) > new Date() && Object.values(users).filter(u => !u.isAdmin && !u.picks?.[m.id]).length > 0).length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: '20px 0' }}>✅ Everyone has picked all upcoming matches.</div>
+                )}
               </div>
             )}
 
