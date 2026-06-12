@@ -1382,6 +1382,17 @@ function App() {
     if (window.confirm("Delete this match?")) { await supabaseClient.from('matches').delete().eq('id', mid); fetchAllData(); }
   }
 
+  async function adminResetPassword(username) {
+    if (!window.confirm(`Reset ${username}'s password?`)) return;
+    const temp = Math.random().toString(36).slice(-8);
+    try {
+      const { data, error: fnErr } = await supabaseClient.functions.invoke('admin-reset-password', { body: { username, newPassword: temp } });
+      if (fnErr) { alert(`Reset error: ${fnErr.message}`); return; }
+      if (data?.error) { alert(`Reset error: ${data.error}`); return; }
+      alert(`New password for ${username}:\n\n${temp}\n\nShare this with the player — they can change it after logging in.`);
+    } catch (err) { alert(`Error: ${err.message}`); }
+  }
+
   async function adminSaveWinnerConfig(winner) {
     await supabaseClient.from('tournament_config').update({ tournament_winner: winner }).eq('id', 1);
     fetchAllData(); triggerToast("🏆 Champion set!");
@@ -1475,6 +1486,9 @@ function App() {
                   <PasswordField placeholder={tr("Password","Parolă")} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === "Enter" && runLogin()} />
                   {error && <div className="error-text">{error}</div>}
                   <button className="btn btn-gold btn-block" onClick={runLogin}>{tr("ENTER THE ARENA →","INTRĂ ÎN ARENĂ →")}</button>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', textAlign: 'center', marginTop: 4 }}>
+                    {tr("Forgot your password? Ask the admin to reset it.","Ai uitat parola? Cere adminului să o reseteze.")}
+                  </div>
                 </div>
               ) : (
                 <div className="flex-col">
@@ -2075,12 +2089,15 @@ function App() {
                         </div>
                       </div>
                       {!u.isAdmin && (
-                        <button className="btn btn-danger btn-sm" onClick={async () => {
-                          if (window.confirm("Delete this account?")) {
-                            await supabaseClient.from('profiles').delete().eq('username', u.username);
-                            fetchAllData();
-                          }
-                        }}>DELETE</button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: 11 }} onClick={() => adminResetPassword(u.username)}>RESET PW</button>
+                          <button className="btn btn-danger btn-sm" onClick={async () => {
+                            if (window.confirm("Delete this account?")) {
+                              await supabaseClient.from('profiles').delete().eq('username', u.username);
+                              fetchAllData();
+                            }
+                          }}>DELETE</button>
+                        </div>
                       )}
                     </div>
                   );
