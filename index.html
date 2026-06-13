@@ -1407,6 +1407,17 @@ function App() {
 
   const upcomingMatchesSorted = useMemo(() => matches.filter(m => !m.result).sort((a,b) => new Date(a.match_date+"T"+a.match_time) - new Date(b.match_date+"T"+b.match_time)), [matches]);
 
+  // A match counts as "live" from kickoff until ~3h later (covers 90' + extra
+  // time + penalties) and only while it has no result yet.
+  const hasLiveMatch = useMemo(() => {
+    const now = new Date();
+    return matches.some(m => {
+      if (m.result) return false;
+      const elapsed = now - new Date(m.match_date + "T" + m.match_time);
+      return elapsed >= 0 && elapsed <= 3 * 60 * 60 * 1000;
+    });
+  }, [matches]);
+
   const processedMatchdaySplit = useMemo(() => {
     // Show ALL matches without a result — filter only hides completed ones
     // Pick buttons lock based on match time, but the card stays visible always
@@ -1699,7 +1710,7 @@ function App() {
                 <div className="section-title">{tr("Matches","Meciuri")}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {isTournamentBegun && (
+                {hasLiveMatch && (
                   <div className="live-badge"><div className="live-dot"></div>LIVE</div>
                 )}
                 <button
