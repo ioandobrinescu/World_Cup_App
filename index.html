@@ -1903,10 +1903,12 @@ function App() {
                         const players = groups[outcome].slice().sort(byName);
                         if (!players.length) return null;
                         const correct = outcome === m.result;
+                        const odds = outcome === "1" ? m.odds1 : outcome === "X" ? m.oddsx : m.odds2;
+                        const pts = (parseFloat(odds) || 0).toFixed(2);
                         return (
                           <div key={outcome} className="results-group">
                             <div className={`results-group-head ${correct ? "correct" : "wrong"}`}>
-                              {correct ? "✓" : "✗"} {pickName(m, outcome)} · {players.length}
+                              {correct ? "✓" : "✗"} {pickName(m, outcome)} · {players.length}{correct && ` · +${pts} ${tr("points","puncte")}`}
                             </div>
                             {players.map(u => <div key={u} className={`results-player ${correct ? "correct" : "wrong"}`}>{u}</div>)}
                           </div>
